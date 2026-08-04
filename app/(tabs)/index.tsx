@@ -1,98 +1,264 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { getRecipes, Recipe } from '../../services/recipeStorage';
+
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    const [recipes, setRecipes] = useState<Recipe[]>([]);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useFocusEffect(
+    useCallback(() => {
+      async function loadRecipes() {
+        const savedRecipes = await getRecipes();
+        setRecipes(savedRecipes);
+      }
+
+      loadRecipes();
+    }, [])
+  );
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.eyebrow}>MY KITCHEN</Text>
+      <Text style={styles.title}>Personal Cookbook</Text>
+      <Text style={styles.subtitle}>
+        Save the dishes you create, remember what worked, and bring your best meals back.
+      </Text>
+
+  <TouchableOpacity
+    style={styles.primaryButton}
+    onPress={() => router.push('/add-recipe')}
+>
+  <Text style={styles.primaryButtonText}>＋ Add a Recipe</Text>
+</TouchableOpacity>
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>⌕ Search</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>▦ Meal Plan</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recently Added</Text>
+        <Text style={styles.sectionLink}>See all</Text>
+      </View>
+
+      {recipes.length === 0 && (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>No recipes saved yet</Text>
+          <Text style={styles.emptyText}>
+            Capture your first dish and it will appear here.
+        </Text>
+      </View>
+      )}
+      {recipes.map((recipe) => (
+        <TouchableOpacity
+  key={recipe.id}
+  style={styles.recipeCard}
+  onPress={() =>
+    router.push({
+      pathname: '/recipe',
+      params: {
+        id: recipe.id,
+        name: recipe.name,
+        rating: recipe.rating,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        notes: recipe.notes,
+      },
+    })
+  }
+>
+          <View style={styles.recipeImagePlaceholder}>
+            <Text style={styles.recipeImageText}>Dish photo</Text>
+          </View>
+
+          <View style={styles.recipeDetails}>
+            <Text style={styles.recipeName}>{recipe.name}</Text>
+            <Text style={styles.rating}>
+  {recipe.rating ? '★'.repeat(Number(recipe.rating)) : 'Not rated'}
+</Text>
+            <Text style={styles.recipeNote}>Tap to view recipe</Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+
+      <View style={styles.memoryCard}>
+        <Text style={styles.memoryLabel}>FROM YOUR COOKING MEMORY</Text>
+        <Text style={styles.memoryTitle}>Rediscover a forgotten favorite</Text>
+        <Text style={styles.memoryText}>
+          As your cookbook grows, this space will remind you about highly rated dishes you have not
+          made recently.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#F7F3EC',
+    paddingTop: 72,
+    paddingHorizontal: 22,
+    paddingBottom: 40,
   },
-  stepContainer: {
-    gap: 8,
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: '#8A5A44',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  title: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#2D2A26',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#67615A',
+    marginBottom: 24,
+  },
+  primaryButton: {
+    backgroundColor: '#7A3E2F',
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 30,
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5DED4',
+  },
+  secondaryButtonText: {
+    color: '#493F37',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#2D2A26',
+  },
+  sectionLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8A5A44',
+  },
+  
+    emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E9E2D9',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2D2A26',
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#7B746D',
+  },
+  
+  recipeCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    marginBottom: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E9E2D9',
+  },
+  recipeImagePlaceholder: {
+    width: 105,
+    minHeight: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DDD0C2',
+  },
+  recipeImageText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#765D4D',
+  },
+  recipeDetails: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  recipeName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2D2A26',
+    marginBottom: 5,
+  },
+  rating: {
+    fontSize: 16,
+    color: '#A96C25',
+    marginBottom: 6,
+  },
+  recipeNote: {
+    fontSize: 13,
+    color: '#7B746D',
+  },
+  memoryCard: {
+    backgroundColor: '#E7DED0',
+    borderRadius: 18,
+    padding: 20,
+    marginTop: 12,
+  },
+  memoryLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.3,
+    color: '#7A3E2F',
+    marginBottom: 8,
+  },
+  memoryTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#2D2A26',
+    marginBottom: 8,
+  },
+  memoryText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#625B54',
   },
 });
