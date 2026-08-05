@@ -8,6 +8,7 @@ export type Recipe = {
   instructions: string;
   notes: string;
   createdAt: string;
+  photoUri?: string;
 };
 
 const RECIPES_KEY = 'personal-cookbook-recipes';

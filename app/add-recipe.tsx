@@ -3,10 +3,12 @@ import {
   updateRecipe,
 } from '../services/recipeStorage';
 
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -38,6 +40,19 @@ const [rating, setRating] = useState(initialRating ?? '');
 const [ingredients, setIngredients] = useState(initialIngredients ?? '');
 const [instructions, setInstructions] = useState(initialInstructions ?? '');
 const [notes, setNotes] = useState(initialNotes ?? '');
+const [photoUri, setPhotoUri] = useState('');
+
+async function choosePhoto() {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    setPhotoUri(result.assets[0].uri);
+  }
+}
 
 async function saveRecipe() {
   if (!name.trim()) {
@@ -93,6 +108,17 @@ async function saveRecipe() {
       >
         <Text style={styles.eyebrow}>NEW DISH</Text>
         <Text style={styles.title}>Add a Recipe</Text>
+        <Text style={styles.label}>Photo</Text>
+
+<TouchableOpacity style={styles.photoButton} onPress={choosePhoto}>
+  <Text style={styles.photoButtonText}>
+    {photoUri ? 'Choose a Different Photo' : 'Choose Photo'}
+  </Text>
+</TouchableOpacity>
+
+{photoUri ? (
+  <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+) : null}
 
         <Text style={styles.label}>Recipe name</Text>
         <TextInput
@@ -168,6 +194,26 @@ const styles = StyleSheet.create({
     paddingTop: 70,
     paddingHorizontal: 22,
     paddingBottom: 50,
+  },
+    photoButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4DCD2',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  photoButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#7A3E2F',
+  },
+  photoPreview: {
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
+    marginBottom: 20,
   },
   eyebrow: {
     fontSize: 12,
