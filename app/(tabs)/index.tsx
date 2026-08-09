@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { getRecipes, Recipe } from '../../services/recipeStorage';
 
@@ -71,13 +71,18 @@ export default function HomeScreen() {
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
         notes: recipe.notes,
+        photoUri: recipe.photoUri,
       },
     })
   }
 >
-          <View style={styles.recipeImagePlaceholder}>
-            <Text style={styles.recipeImageText}>Dish photo</Text>
-          </View>
+          {recipe.photoUri ? (
+  <Image source={{ uri: recipe.photoUri }} style={styles.recipeImage} />
+) : (
+  <View style={styles.recipeImagePlaceholder}>
+    <Text style={styles.recipeImageText}>Dish photo</Text>
+  </View>
+)}
 
           <View style={styles.recipeDetails}>
             <Text style={styles.recipeName}>{recipe.name}</Text>
@@ -205,6 +210,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9E2D9',
   },
+  recipeImage: {
+  width: 105,
+  minHeight: 110,
+},
   recipeImagePlaceholder: {
     width: 105,
     minHeight: 110,

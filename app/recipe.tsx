@@ -1,16 +1,42 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { deleteRecipe } from '../services/recipeStorage';
 
 export default function RecipeScreen() {
-  const { id, name, rating, ingredients, instructions, notes } = useLocalSearchParams<{
+  const { id, name, rating, ingredients, instructions, notes, photoUri } =
+  useLocalSearchParams<{
     id?: string
     name?: string;
     rating?: string;
     ingredients?: string;
     instructions?: string;
     notes?: string;
+    photoUri?: string;
   }>();
+function confirmDelete() {
+  if (!id) {
+    return;
+  }
 
+  Alert.alert(
+    'Delete Recipe?',
+    `Are you sure you want to delete ${name || 'this recipe'}?`,
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteRecipe(id);
+          router.replace('/');
+        },
+      },
+    ]
+  );
+}
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topButtons}>
@@ -43,6 +69,9 @@ export default function RecipeScreen() {
       <Text style={styles.rating}>
         {rating ? '★'.repeat(Number(rating)) : 'Not rated'}
       </Text>
+{photoUri ? (
+  <Image source={{ uri: photoUri }} style={styles.recipePhoto} />
+) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Ingredients</Text>
@@ -60,10 +89,20 @@ export default function RecipeScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notes</Text>
+
         <Text style={styles.bodyText}>
           {notes || 'No notes added.'}
         </Text>
-      </View>
+    </View>
+
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={confirmDelete}
+    >
+        <Text style={styles.deleteButtonText}>
+         Delete Recipe
+        </Text>
+</TouchableOpacity>
     </ScrollView>
   );
 }
@@ -113,6 +152,12 @@ editButton: {
     color: '#A96C25',
     marginBottom: 28,
   },
+    recipePhoto: {
+    width: '100%',
+    height: 260,
+    borderRadius: 18,
+    marginBottom: 24,
+  },
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -132,4 +177,18 @@ editButton: {
     lineHeight: 24,
     color: '#5F5851',
   },
+  deleteButton: {
+  borderWidth: 1,
+  borderColor: '#B24A3A',
+  borderRadius: 16,
+  paddingVertical: 16,
+  alignItems: 'center',
+  marginTop: 8,
+},
+
+deleteButtonText: {
+  color: '#B24A3A',
+  fontSize: 16,
+  fontWeight: '700',
+},
 });

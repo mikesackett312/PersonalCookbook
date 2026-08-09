@@ -44,3 +44,13 @@ export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
     JSON.stringify(updatedRecipes)
   );
 }
+export async function deleteRecipe(id: string): Promise<void> {
+  const recipes = await getRecipes();
+
+  const remainingRecipes = recipes.filter((recipe) => recipe.id !== id);
+
+  await AsyncStorage.setItem(
+    RECIPES_KEY,
+    JSON.stringify(remainingRecipes)
+  );
+}

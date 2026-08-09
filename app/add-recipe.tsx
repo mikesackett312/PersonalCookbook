@@ -26,6 +26,7 @@ import {
   ingredients: initialIngredients,
   instructions: initialInstructions,
   notes: initialNotes,
+  photoUri: initialPhotoUri,
 } = useLocalSearchParams<{
   id?: string;
   name?: string;
@@ -33,6 +34,7 @@ import {
   ingredients?: string;
   instructions?: string;
   notes?: string;
+  photoUri?: string;
 }>();
 
 const [name, setName] = useState(initialName ?? '');
@@ -40,7 +42,7 @@ const [rating, setRating] = useState(initialRating ?? '');
 const [ingredients, setIngredients] = useState(initialIngredients ?? '');
 const [instructions, setInstructions] = useState(initialInstructions ?? '');
 const [notes, setNotes] = useState(initialNotes ?? '');
-const [photoUri, setPhotoUri] = useState('');
+const [photoUri, setPhotoUri] = useState(initialPhotoUri ?? '');
 
 async function choosePhoto() {
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -69,6 +71,7 @@ async function saveRecipe() {
       instructions: instructions.trim(),
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
+      photoUri,
     };
 
     if (id) {
