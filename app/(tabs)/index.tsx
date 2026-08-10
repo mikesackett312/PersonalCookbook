@@ -1,13 +1,21 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { getRecipes, Recipe } from '../../services/recipeStorage';
 
 
 export default function HomeScreen() {
     const [recipes, setRecipes] = useState<Recipe[]>([]);
+    const [searchText, setSearchText] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -19,13 +27,33 @@ export default function HomeScreen() {
       loadRecipes();
     }, [])
   );
+  const filteredRecipes = recipes.filter((recipe) => {
+  const search = searchText.toLowerCase().trim();
+
+  if (!search) {
+    return true;
+  }
+
+  return (
+    recipe.name.toLowerCase().includes(search) ||
+    recipe.ingredients.toLowerCase().includes(search) ||
+    recipe.notes.toLowerCase().includes(search)
+  );
+});
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.eyebrow}>MY KITCHEN</Text>
-      <Text style={styles.title}>Personal Cookbook</Text>
+      <Text style={styles.title}>Recipe Box</Text>
       <Text style={styles.subtitle}>
-        Save the dishes you create, remember what worked, and bring your best meals back.
+        Save the dishes you create, remember what worked, and keep your favorites close at hand.
       </Text>
+      <TextInput
+  value={searchText}
+  onChangeText={setSearchText}
+  placeholder="Search recipes..."
+  placeholderTextColor="#9A938C"
+  style={styles.searchInput}
+/>
 
   <TouchableOpacity
     style={styles.primaryButton}
@@ -57,7 +85,15 @@ export default function HomeScreen() {
         </Text>
       </View>
       )}
-      {recipes.map((recipe) => (
+      {recipes.length > 0 && filteredRecipes.length === 0 && (
+  <View style={styles.emptyCard}>
+    <Text style={styles.emptyTitle}>No recipes found</Text>
+    <Text style={styles.emptyText}>
+      Try a different search.
+    </Text>
+  </View>
+)}
+      {filteredRecipes.map((recipe) => (
         <TouchableOpacity
   key={recipe.id}
   style={styles.recipeCard}
@@ -270,4 +306,15 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: '#625B54',
   },
+  searchInput: {
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E4DCD2',
+  borderRadius: 14,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  fontSize: 16,
+  color: '#2D2A26',
+  marginBottom: 18,
+},
 });
