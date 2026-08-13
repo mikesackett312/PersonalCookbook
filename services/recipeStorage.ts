@@ -10,6 +10,7 @@ export type Recipe = {
   notes: string;
   createdAt: string;
   photoUri?: string;
+  favorite?: boolean;
 };
 
 const RECIPES_KEY = 'personal-cookbook-recipes';

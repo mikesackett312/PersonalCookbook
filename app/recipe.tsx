@@ -14,6 +14,7 @@ import {
     deleteRecipe,
     getRecipeById,
     Recipe,
+    updateRecipe,
 } from '../services/recipeStorage';
 
 export default function RecipeScreen() {
@@ -56,6 +57,20 @@ export default function RecipeScreen() {
     );
   }
 
+  async function toggleFavorite() {
+    if (!recipe) {
+      return;
+    }
+
+    const updatedRecipe = {
+      ...recipe,
+      favorite: !recipe.favorite,
+    };
+
+    await updateRecipe(updatedRecipe);
+    setRecipe(updatedRecipe);
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topButtons}>
@@ -94,6 +109,12 @@ export default function RecipeScreen() {
       {recipe?.category ? (
         <Text style={styles.category}>{recipe.category}</Text>
       ) : null}
+
+        <TouchableOpacity onPress={toggleFavorite}>
+        <Text style={styles.favoriteButton}>
+            {recipe?.favorite ? '♥ Favorite' : '♡ Add to Favorites'}
+        </Text>
+        </TouchableOpacity>
 
       <Text style={styles.rating}>
         {recipe?.rating
@@ -241,4 +262,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+
+  favoriteButton: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#7A3E2F',
+  marginBottom: 14,
+},
 });
