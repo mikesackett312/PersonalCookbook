@@ -27,6 +27,7 @@ import {
   instructions: initialInstructions,
   notes: initialNotes,
   photoUri: initialPhotoUri,
+  category: initialCategory,
 } = useLocalSearchParams<{
   id?: string;
   name?: string;
@@ -35,6 +36,7 @@ import {
   instructions?: string;
   notes?: string;
   photoUri?: string;
+  category?: string;
 }>();
 
 const [name, setName] = useState(initialName ?? '');
@@ -43,6 +45,7 @@ const [ingredients, setIngredients] = useState(initialIngredients ?? '');
 const [instructions, setInstructions] = useState(initialInstructions ?? '');
 const [notes, setNotes] = useState(initialNotes ?? '');
 const [photoUri, setPhotoUri] = useState(initialPhotoUri ?? '');
+const [category, setCategory] = useState(initialCategory ?? '');
 
 async function choosePhoto() {
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -71,6 +74,7 @@ async function saveRecipe() {
       instructions: instructions.trim(),
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
+      category: category.trim(),
       photoUri,
     };
 
@@ -128,6 +132,14 @@ async function saveRecipe() {
           value={name}
           onChangeText={setName}
           placeholder="Example: Cajun Shrimp Pasta"
+          placeholderTextColor="#9A938C"
+          style={styles.input}
+        />
+        <Text style={styles.label}>Category</Text>
+        <TextInput
+          value={category}
+          onChangeText={setCategory}
+          placeholder="Example: Chicken, Soup, Dessert"
           placeholderTextColor="#9A938C"
           style={styles.input}
         />

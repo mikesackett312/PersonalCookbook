@@ -122,6 +122,11 @@ export default function HomeScreen() {
 
           <View style={styles.recipeDetails}>
             <Text style={styles.recipeName}>{recipe.name}</Text>
+
+            {recipe.category ? (
+  <Text style={styles.category}>{recipe.category}</Text>
+) : null}
+
             <Text style={styles.rating}>
   {recipe.rating ? '★'.repeat(Number(recipe.rating)) : 'Not rated'}
 </Text>
@@ -273,6 +278,12 @@ const styles = StyleSheet.create({
     color: '#2D2A26',
     marginBottom: 5,
   },
+  category: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#7A3E2F',
+  marginBottom: 4,
+},
   rating: {
     fontSize: 16,
     color: '#A96C25',

@@ -4,6 +4,7 @@ export type Recipe = {
   id: string;
   name: string;
   rating: string;
+  category?: string;
   ingredients: string;
   instructions: string;
   notes: string;
@@ -44,6 +45,13 @@ export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
     JSON.stringify(updatedRecipes)
   );
 }
+
+export async function getRecipeById(id: string): Promise<Recipe | null> {
+  const recipes = await getRecipes();
+
+  return recipes.find((recipe) => recipe.id === id) ?? null;
+}
+
 export async function deleteRecipe(id: string): Promise<void> {
   const recipes = await getRecipes();
 
