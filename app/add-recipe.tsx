@@ -1,11 +1,13 @@
 import {
+  getRecipeById,
+  Recipe,
   saveRecipe as saveRecipeToStorage,
-  updateRecipe,
+  updateRecipeFields,
 } from '../services/recipeStorage';
 
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -15,119 +17,194 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
 } from 'react-native';
 
-    export default function AddRecipeScreen() {
-    const {
-  id,
-  name: initialName,
-  rating: initialRating,
-  ingredients: initialIngredients,
-  instructions: initialInstructions,
-  notes: initialNotes,
-  photoUri: initialPhotoUri,
-  category: initialCategory,
-} = useLocalSearchParams<{
-  id?: string;
-  name?: string;
-  rating?: string;
-  ingredients?: string;
-  instructions?: string;
-  notes?: string;
-  photoUri?: string;
-  category?: string;
-}>();
+export default function AddRecipeScreen() {
+  const { id } = useLocalSearchParams<{
+    id?: string;
+  }>();
 
-const [name, setName] = useState(initialName ?? '');
-const [rating, setRating] = useState(initialRating ?? '');
-const [ingredients, setIngredients] = useState(initialIngredients ?? '');
-const [instructions, setInstructions] = useState(initialInstructions ?? '');
-const [notes, setNotes] = useState(initialNotes ?? '');
-const [photoUri, setPhotoUri] = useState(initialPhotoUri ?? '');
-const [category, setCategory] = useState(initialCategory ?? '');
+  const [name, setName] = useState('');
+  const [rating, setRating] = useState('');
+  const [ingredients, setIngredients] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [notes, setNotes] = useState('');
+  const [photoUri, setPhotoUri] = useState('');
+  const [category, setCategory] = useState('');
 
-async function choosePhoto() {
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    quality: 0.8,
-  });
+  useEffect(() => {
+    async function loadRecipe(recipeId: string) {
+      try {
+        const existingRecipe = await getRecipeById(recipeId);
 
-  if (!result.canceled) {
-    setPhotoUri(result.assets[0].uri);
-  }
-}
+        if (!existingRecipe) {
+          Alert.alert(
+            'Recipe not found',
+            'This recipe could not be loaded.',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.replace('/'),
+              },
+            ]
+          );
 
-async function saveRecipe() {
-  if (!name.trim()) {
-    Alert.alert('Recipe name required', 'Please enter a name for this dish.');
-    return;
-  }
+          return;
+        }
 
-  try {
-    const recipeToSave = {
-      id: id ?? Date.now().toString(),
-      name: name.trim(),
-      rating: rating.trim(),
-      ingredients: ingredients.trim(),
-      instructions: instructions.trim(),
-      notes: notes.trim(),
-      createdAt: new Date().toISOString(),
-      category: category.trim(),
-      photoUri,
-    };
+        setName(existingRecipe.name ?? '');
+        setRating(existingRecipe.rating ?? '');
+        setIngredients(existingRecipe.ingredients ?? '');
+        setInstructions(existingRecipe.instructions ?? '');
+        setNotes(existingRecipe.notes ?? '');
+        setPhotoUri(existingRecipe.photoUri ?? '');
+        setCategory(existingRecipe.category ?? '');
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : String(error);
 
-    if (id) {
-      await updateRecipe(recipeToSave);
-    } else {
-      await saveRecipeToStorage(recipeToSave);
+        Alert.alert(
+          'Load failed',
+          message
+        );
+      }
     }
 
-    Alert.alert(
-      id ? 'Recipe updated' : 'Recipe saved',
-      id
-        ? `${name} has been updated.`
-        : `${name} has been added to your cookbook.`,
-      [
-        {
-          text: 'Done',
-          onPress: () => router.replace('/'),
-        },
-      ]
-    );
-  } catch {
-    Alert.alert(
-      'Save failed',
-      'The recipe could not be saved. Please try again.'
-    );
-  }
-}
+    if (typeof id === 'string') {
+      loadRecipe(id);
+    }
+  }, [id]);
 
-    return (
-        <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-        <ScrollView
+  async function choosePhoto() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
+
+  async function saveRecipe() {
+    if (!name.trim()) {
+      Alert.alert(
+        'Recipe name required',
+        'Please enter a name for this dish.'
+      );
+
+      return;
+    }
+
+    try {
+      if (typeof id === 'string') {
+        await updateRecipeFields(id, {
+          name: name.trim(),
+          rating: rating.trim(),
+          category: category.trim(),
+          ingredients: ingredients.trim(),
+          instructions: instructions.trim(),
+          notes: notes.trim(),
+          photoUri,
+        });
+
+        Alert.alert(
+          'Recipe updated',
+          `${name} has been updated.`,
+          [
+            {
+              text: 'Done',
+              onPress: () => router.replace('/'),
+            },
+          ]
+        );
+      } else {
+        const newRecipe: Recipe = {
+          id: Date.now().toString(),
+          name: name.trim(),
+          rating: rating.trim(),
+          category: category.trim(),
+          ingredients: ingredients.trim(),
+          instructions: instructions.trim(),
+          notes: notes.trim(),
+          createdAt: new Date().toISOString(),
+          photoUri,
+          favorite: false,
+        };
+
+        await saveRecipeToStorage(newRecipe);
+
+        Alert.alert(
+          'Recipe saved',
+          `${name} has been added to your cookbook.`,
+          [
+            {
+              text: 'Done',
+              onPress: () => router.replace('/'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      Alert.alert(
+        'Save failed',
+        message
+      );
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.eyebrow}>NEW DISH</Text>
-        <Text style={styles.title}>Add a Recipe</Text>
+        <Text style={styles.eyebrow}>
+          {typeof id === 'string'
+            ? 'EDIT DISH'
+            : 'NEW DISH'}
+        </Text>
+
+        <Text style={styles.title}>
+          {typeof id === 'string'
+            ? 'Edit Recipe'
+            : 'Add a Recipe'}
+        </Text>
+
         <Text style={styles.label}>Photo</Text>
 
-<TouchableOpacity style={styles.photoButton} onPress={choosePhoto}>
-  <Text style={styles.photoButtonText}>
-    {photoUri ? 'Choose a Different Photo' : 'Choose Photo'}
-  </Text>
-</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.photoButton}
+          onPress={choosePhoto}
+        >
+          <Text style={styles.photoButtonText}>
+            {photoUri
+              ? 'Choose a Different Photo'
+              : 'Choose Photo'}
+          </Text>
+        </TouchableOpacity>
 
-{photoUri ? (
-  <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-) : null}
+        {photoUri ? (
+          <Image
+            source={{ uri: photoUri }}
+            style={styles.photoPreview}
+          />
+        ) : null}
 
         <Text style={styles.label}>Recipe name</Text>
+
         <TextInput
           value={name}
           onChangeText={setName}
@@ -135,7 +212,9 @@ async function saveRecipe() {
           placeholderTextColor="#9A938C"
           style={styles.input}
         />
+
         <Text style={styles.label}>Category</Text>
+
         <TextInput
           value={category}
           onChangeText={setCategory}
@@ -145,6 +224,7 @@ async function saveRecipe() {
         />
 
         <Text style={styles.label}>Rating</Text>
+
         <TextInput
           value={rating}
           onChangeText={setRating}
@@ -156,6 +236,7 @@ async function saveRecipe() {
         />
 
         <Text style={styles.label}>Ingredients</Text>
+
         <TextInput
           value={ingredients}
           onChangeText={setIngredients}
@@ -167,6 +248,7 @@ async function saveRecipe() {
         />
 
         <Text style={styles.label}>Instructions</Text>
+
         <TextInput
           value={instructions}
           onChangeText={setInstructions}
@@ -177,7 +259,10 @@ async function saveRecipe() {
           style={[styles.input, styles.largeInput]}
         />
 
-        <Text style={styles.label}>Notes and changes for next time</Text>
+        <Text style={styles.label}>
+          Notes and changes for next time
+        </Text>
+
         <TextInput
           value={notes}
           onChangeText={setNotes}
@@ -188,12 +273,22 @@ async function saveRecipe() {
           style={[styles.input, styles.notesInput]}
         />
 
-        <TouchableOpacity style={styles.saveButton} onPress={saveRecipe}>
-          <Text style={styles.saveButtonText}>Save Recipe</Text>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={saveRecipe}
+        >
+          <Text style={styles.saveButtonText}>
+            Save Recipe
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.cancelButtonText}>
+            Cancel
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -205,12 +300,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7F3EC',
   },
+
   container: {
     paddingTop: 70,
     paddingHorizontal: 22,
     paddingBottom: 50,
   },
-    photoButton: {
+
+  photoButton: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E4DCD2',
@@ -219,17 +316,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
+
   photoButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#7A3E2F',
   },
+
   photoPreview: {
     width: '100%',
     height: 220,
     borderRadius: 16,
     marginBottom: 20,
   },
+
   eyebrow: {
     fontSize: 12,
     fontWeight: '700',
@@ -237,18 +337,21 @@ const styles = StyleSheet.create({
     color: '#8A5A44',
     marginBottom: 8,
   },
+
   title: {
     fontSize: 34,
     fontWeight: '800',
     color: '#2D2A26',
     marginBottom: 28,
   },
+
   label: {
     fontSize: 15,
     fontWeight: '700',
     color: '#493F37',
     marginBottom: 8,
   },
+
   input: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -260,12 +363,15 @@ const styles = StyleSheet.create({
     color: '#2D2A26',
     marginBottom: 20,
   },
+
   largeInput: {
     minHeight: 140,
   },
+
   notesInput: {
     minHeight: 105,
   },
+
   saveButton: {
     backgroundColor: '#7A3E2F',
     borderRadius: 16,
@@ -273,15 +379,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
   },
+
   cancelButton: {
     alignItems: 'center',
     paddingVertical: 16,
   },
+
   cancelButtonText: {
     color: '#7A3E2F',
     fontSize: 16,

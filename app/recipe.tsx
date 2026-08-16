@@ -39,7 +39,9 @@ export default function RecipeScreen() {
 
     Alert.alert(
       'Delete Recipe?',
-      `Are you sure you want to delete ${recipe.name || 'this recipe'}?`,
+      `Are you sure you want to delete ${
+        recipe.name || 'this recipe'
+      }?`,
       [
         {
           text: 'Cancel',
@@ -71,6 +73,19 @@ export default function RecipeScreen() {
     setRecipe(updatedRecipe);
   }
 
+  function editRecipe() {
+    if (!recipe) {
+      return;
+    }
+
+    router.push({
+      pathname: '/add-recipe',
+      params: {
+        id: recipe.id,
+      },
+    });
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topButtons}>
@@ -79,21 +94,7 @@ export default function RecipeScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: '/add-recipe',
-              params: {
-                id: recipe?.id,
-                name: recipe?.name,
-                rating: recipe?.rating,
-                ingredients: recipe?.ingredients,
-                instructions: recipe?.instructions,
-                notes: recipe?.notes,
-                photoUri: recipe?.photoUri,
-                category: recipe?.category,
-              },
-            })
-          }
+          onPress={editRecipe}
           disabled={!recipe}
         >
           <Text style={styles.editButton}>Edit</Text>
@@ -107,14 +108,21 @@ export default function RecipeScreen() {
       </Text>
 
       {recipe?.category ? (
-        <Text style={styles.category}>{recipe.category}</Text>
+        <Text style={styles.category}>
+          {recipe.category}
+        </Text>
       ) : null}
 
-        <TouchableOpacity onPress={toggleFavorite}>
+      <TouchableOpacity
+        onPress={toggleFavorite}
+        disabled={!recipe}
+      >
         <Text style={styles.favoriteButton}>
-            {recipe?.favorite ? '♥ Favorite' : '♡ Add to Favorites'}
+          {recipe?.favorite
+            ? '♥ Favorite'
+            : '♡ Add to Favorites'}
         </Text>
-        </TouchableOpacity>
+      </TouchableOpacity>
 
       <Text style={styles.rating}>
         {recipe?.rating
@@ -130,21 +138,30 @@ export default function RecipeScreen() {
       ) : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Ingredients</Text>
+        <Text style={styles.sectionTitle}>
+          Ingredients
+        </Text>
+
         <Text style={styles.bodyText}>
           {recipe?.ingredients || 'No ingredients added.'}
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Instructions</Text>
+        <Text style={styles.sectionTitle}>
+          Instructions
+        </Text>
+
         <Text style={styles.bodyText}>
           {recipe?.instructions || 'No instructions added.'}
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
+        <Text style={styles.sectionTitle}>
+          Notes
+        </Text>
+
         <Text style={styles.bodyText}>
           {recipe?.notes || 'No notes added.'}
         </Text>
@@ -264,9 +281,9 @@ const styles = StyleSheet.create({
   },
 
   favoriteButton: {
-  fontSize: 16,
-  fontWeight: '700',
-  color: '#7A3E2F',
-  marginBottom: 14,
-},
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#7A3E2F',
+    marginBottom: 14,
+  },
 });

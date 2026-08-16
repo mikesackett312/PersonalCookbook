@@ -13,6 +13,16 @@ export type Recipe = {
   favorite?: boolean;
 };
 
+export type EditableRecipeFields = {
+  name: string;
+  rating: string;
+  category?: string;
+  ingredients: string;
+  instructions: string;
+  notes: string;
+  photoUri?: string;
+};
+
 const RECIPES_KEY = 'personal-cookbook-recipes';
 
 export async function getRecipes(): Promise<Recipe[]> {
@@ -34,11 +44,19 @@ export async function saveRecipe(recipe: Recipe): Promise<void> {
     JSON.stringify(updatedRecipes)
   );
 }
+
 export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
   const recipes = await getRecipes();
 
   const updatedRecipes = recipes.map((recipe) =>
-    recipe.id === updatedRecipe.id ? updatedRecipe : recipe
+    recipe.id === updatedRecipe.id
+      ? {
+          ...recipe,
+          ...updatedRecipe,
+          id: recipe.id,
+          createdAt: recipe.createdAt || updatedRecipe.createdAt,
+        }
+      : recipe
   );
 
   await AsyncStorage.setItem(
@@ -47,7 +65,44 @@ export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
   );
 }
 
-export async function getRecipeById(id: string): Promise<Recipe | null> {
+export async function updateRecipeFields(
+  id: string,
+  fields: EditableRecipeFields
+): Promise<void> {
+  const recipes = await getRecipes();
+
+  const updatedRecipes = recipes.map((recipe) => {
+    if (recipe.id !== id) {
+      return recipe;
+    }
+
+    return {
+      ...recipe,
+      name: fields.name,
+      rating: fields.rating,
+      category: fields.category,
+      ingredients: fields.ingredients,
+      instructions: fields.instructions,
+      notes: fields.notes,
+      photoUri: fields.photoUri,
+
+      // Intentionally preserve:
+      // recipe.id
+      // recipe.createdAt
+      // recipe.favorite
+      // and any future fields not controlled by this edit form
+    };
+  });
+
+  await AsyncStorage.setItem(
+    RECIPES_KEY,
+    JSON.stringify(updatedRecipes)
+  );
+}
+
+export async function getRecipeById(
+  id: string
+): Promise<Recipe | null> {
   const recipes = await getRecipes();
 
   return recipes.find((recipe) => recipe.id === id) ?? null;
@@ -56,7 +111,9 @@ export async function getRecipeById(id: string): Promise<Recipe | null> {
 export async function deleteRecipe(id: string): Promise<void> {
   const recipes = await getRecipes();
 
-  const remainingRecipes = recipes.filter((recipe) => recipe.id !== id);
+  const remainingRecipes = recipes.filter(
+    (recipe) => recipe.id !== id
+  );
 
   await AsyncStorage.setItem(
     RECIPES_KEY,
