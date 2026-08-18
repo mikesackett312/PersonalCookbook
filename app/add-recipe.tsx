@@ -1,6 +1,8 @@
 import {
   getRecipeById,
+  getRecipePhotos,
   Recipe,
+  RecipePhoto,
   saveRecipe as saveRecipeToStorage,
   updateRecipeFields,
 } from '../services/recipeStorage';
@@ -18,6 +20,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function AddRecipeScreen() {
@@ -30,8 +33,12 @@ export default function AddRecipeScreen() {
   const [ingredients, setIngredients] = useState('');
   const [instructions, setInstructions] = useState('');
   const [notes, setNotes] = useState('');
-  const [photoUri, setPhotoUri] = useState('');
   const [category, setCategory] = useState('');
+
+  const [photos, setPhotos] = useState<RecipePhoto[]>([]);
+  const [mainPhotoId, setMainPhotoId] = useState<
+    string | undefined
+  >();
 
   useEffect(() => {
     async function loadRecipe(recipeId: string) {
@@ -58,18 +65,29 @@ export default function AddRecipeScreen() {
         setIngredients(existingRecipe.ingredients ?? '');
         setInstructions(existingRecipe.instructions ?? '');
         setNotes(existingRecipe.notes ?? '');
-        setPhotoUri(existingRecipe.photoUri ?? '');
         setCategory(existingRecipe.category ?? '');
+
+        const existingPhotos = getRecipePhotos(existingRecipe);
+
+        setPhotos(existingPhotos);
+
+        const validMainPhoto =
+          existingRecipe.mainPhotoId &&
+          existingPhotos.some(
+            (photo) =>
+              photo.id === existingRecipe.mainPhotoId
+          )
+            ? existingRecipe.mainPhotoId
+            : existingPhotos[0]?.id;
+
+        setMainPhotoId(validMainPhoto);
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : String(error);
 
-        Alert.alert(
-          'Load failed',
-          message
-        );
+        Alert.alert('Load failed', message);
       }
     }
 
@@ -78,16 +96,129 @@ export default function AddRecipeScreen() {
     }
   }, [id]);
 
-  async function choosePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({
+  function createPhotoId() {
+    return `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 9)}`;
+  }
+
+  function addPhotoUris(uris: string[]) {
+    if (uris.length === 0) {
+      return;
+    }
+
+    const newPhotos = uris.map((uri) => ({
+      id: createPhotoId(),
+      uri,
+    }));
+
+    setPhotos((currentPhotos) => [
+      ...currentPhotos,
+      ...newPhotos,
+    ]);
+
+    setMainPhotoId(
+      (currentMainPhotoId) =>
+        currentMainPhotoId ?? newPhotos[0].id
+    );
+  }
+
+  async function choosePhotosFromLibrary() {
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+
+    if (!result.canceled) {
+      addPhotoUris(
+        result.assets.map((asset) => asset.uri)
+      );
+    }
+  }
+
+  async function takePhoto() {
+    const permission =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Camera permission needed',
+        'Recipe Box needs permission to use the camera before taking a recipe photo.'
+      );
+
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.8,
     });
 
     if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
+      addPhotoUris([result.assets[0].uri]);
     }
+  }
+
+  function addPhoto() {
+    Alert.alert(
+      'Add Photo',
+      'How would you like to add a photo?',
+      [
+        {
+          text: 'Take Photo',
+          onPress: takePhoto,
+        },
+        {
+          text: 'Choose from Library',
+          onPress: choosePhotosFromLibrary,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  }
+
+  function removePhoto(photoId: string) {
+    Alert.alert(
+      'Remove Photo?',
+      'This photo will be removed from the recipe.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            setPhotos((currentPhotos) => {
+              const remainingPhotos =
+                currentPhotos.filter(
+                  (photo) => photo.id !== photoId
+                );
+
+              setMainPhotoId(
+                (currentMainPhotoId) =>
+                  currentMainPhotoId === photoId
+                    ? remainingPhotos[0]?.id
+                    : currentMainPhotoId
+              );
+
+              return remainingPhotos;
+            });
+          },
+        },
+      ]
+    );
+  }
+
+  function makeMainPhoto(photoId: string) {
+    setMainPhotoId(photoId);
   }
 
   async function saveRecipe() {
@@ -100,6 +231,16 @@ export default function AddRecipeScreen() {
       return;
     }
 
+    const resolvedMainPhotoId = photos.some(
+      (photo) => photo.id === mainPhotoId
+    )
+      ? mainPhotoId
+      : photos[0]?.id;
+
+    const mainPhoto = photos.find(
+      (photo) => photo.id === resolvedMainPhotoId
+    );
+
     try {
       if (typeof id === 'string') {
         await updateRecipeFields(id, {
@@ -109,7 +250,8 @@ export default function AddRecipeScreen() {
           ingredients: ingredients.trim(),
           instructions: instructions.trim(),
           notes: notes.trim(),
-          photoUri,
+          photos,
+          mainPhotoId: resolvedMainPhotoId,
         });
 
         Alert.alert(
@@ -132,7 +274,12 @@ export default function AddRecipeScreen() {
           instructions: instructions.trim(),
           notes: notes.trim(),
           createdAt: new Date().toISOString(),
-          photoUri,
+          photos,
+          mainPhotoId: resolvedMainPhotoId,
+
+          // Keep the legacy field synchronized for now.
+          photoUri: mainPhoto?.uri,
+
           favorite: false,
         };
 
@@ -155,17 +302,16 @@ export default function AddRecipeScreen() {
           ? error.message
           : String(error);
 
-      Alert.alert(
-        'Save failed',
-        message
-      );
+      Alert.alert('Save failed', message);
     }
   }
 
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={
+        Platform.OS === 'ios' ? 'padding' : undefined
+      }
     >
       <ScrollView
         contentContainerStyle={styles.container}
@@ -183,25 +329,88 @@ export default function AddRecipeScreen() {
             : 'Add a Recipe'}
         </Text>
 
-        <Text style={styles.label}>Photo</Text>
+        <Text style={styles.label}>Photos</Text>
 
         <TouchableOpacity
           style={styles.photoButton}
-          onPress={choosePhoto}
+          onPress={addPhoto}
         >
           <Text style={styles.photoButtonText}>
-            {photoUri
-              ? 'Choose a Different Photo'
-              : 'Choose Photo'}
+            ＋ Add Photo
           </Text>
         </TouchableOpacity>
 
-        {photoUri ? (
-          <Image
-            source={{ uri: photoUri }}
-            style={styles.photoPreview}
-          />
-        ) : null}
+        {photos.length === 0 ? (
+          <Text style={styles.noPhotosText}>
+            No photos added yet.
+          </Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photoGallery}
+          >
+            {photos.map((photo) => {
+              const isMain =
+                photo.id === mainPhotoId;
+
+              return (
+                <View
+                  key={photo.id}
+                  style={styles.photoCard}
+                >
+                  <View style={styles.photoImageWrapper}>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={styles.photoPreview}
+                    />
+
+                    {isMain ? (
+                      <View style={styles.mainBadge}>
+                        <Text style={styles.mainBadgeText}>
+                          MAIN
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {!isMain ? (
+                    <TouchableOpacity
+                      style={styles.photoActionButton}
+                      onPress={() =>
+                        makeMainPhoto(photo.id)
+                      }
+                    >
+                      <Text style={styles.photoActionText}>
+                        Make Main
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.mainPhotoIndicator}>
+                      <Text
+                        style={
+                          styles.mainPhotoIndicatorText
+                        }
+                      >
+                        Main Photo
+                      </Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      removePhoto(photo.id)
+                    }
+                  >
+                    <Text style={styles.removePhotoText}>
+                      Remove
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
 
         <Text style={styles.label}>Recipe name</Text>
 
@@ -240,7 +449,9 @@ export default function AddRecipeScreen() {
         <TextInput
           value={ingredients}
           onChangeText={setIngredients}
-          placeholder={'1 lb shrimp\n2 cloves garlic\n1 cup cream'}
+          placeholder={
+            '1 lb shrimp\n2 cloves garlic\n1 cup cream'
+          }
           placeholderTextColor="#9A938C"
           multiline
           textAlignVertical="top"
@@ -307,29 +518,6 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
 
-  photoButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E4DCD2',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-
-  photoButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7A3E2F',
-  },
-
-  photoPreview: {
-    width: '100%',
-    height: 220,
-    borderRadius: 16,
-    marginBottom: 20,
-  },
-
   eyebrow: {
     fontSize: 12,
     fontWeight: '700',
@@ -350,6 +538,99 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#493F37',
     marginBottom: 8,
+  },
+
+  photoButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4DCD2',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  photoButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#7A3E2F',
+  },
+
+  noPhotosText: {
+    fontSize: 14,
+    color: '#7B746D',
+    marginBottom: 22,
+  },
+
+  photoGallery: {
+    gap: 12,
+    paddingBottom: 22,
+  },
+
+  photoCard: {
+    width: 150,
+  },
+
+  photoImageWrapper: {
+    position: 'relative',
+  },
+
+  photoPreview: {
+    width: 150,
+    height: 120,
+    borderRadius: 14,
+  },
+
+  mainBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#7A3E2F',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+
+  mainBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+  },
+
+  photoActionButton: {
+    borderWidth: 1,
+    borderColor: '#D9D0C6',
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+
+  photoActionText: {
+    color: '#7A3E2F',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  mainPhotoIndicator: {
+    paddingVertical: 9,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+
+  mainPhotoIndicatorText: {
+    color: '#7A3E2F',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  removePhotoText: {
+    color: '#B24A3A',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 
   input: {

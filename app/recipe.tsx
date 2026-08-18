@@ -12,7 +12,9 @@ import {
 
 import {
     deleteRecipe,
+    getMainPhotoUri,
     getRecipeById,
+    getRecipePhotos,
     Recipe,
     updateRecipe,
 } from '../services/recipeStorage';
@@ -22,14 +24,39 @@ export default function RecipeScreen() {
     id?: string;
   }>();
 
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [recipe, setRecipe] =
+    useState<Recipe | null>(null);
+
+  const [selectedPhotoId, setSelectedPhotoId] =
+    useState<string | undefined>();
 
   useEffect(() => {
-    if (!id) {
-      return;
+    async function loadRecipe(recipeId: string) {
+      const savedRecipe =
+        await getRecipeById(recipeId);
+
+      setRecipe(savedRecipe);
+
+      if (savedRecipe) {
+        const photos =
+          getRecipePhotos(savedRecipe);
+
+        const initialPhotoId =
+          savedRecipe.mainPhotoId &&
+          photos.some(
+            (photo) =>
+              photo.id === savedRecipe.mainPhotoId
+          )
+            ? savedRecipe.mainPhotoId
+            : photos[0]?.id;
+
+        setSelectedPhotoId(initialPhotoId);
+      }
     }
 
-    getRecipeById(id).then(setRecipe);
+    if (typeof id === 'string') {
+      loadRecipe(id);
+    }
   }, [id]);
 
   function confirmDelete() {
@@ -86,18 +113,43 @@ export default function RecipeScreen() {
     });
   }
 
+  const photos = recipe
+    ? getRecipePhotos(recipe)
+    : [];
+
+  const mainPhotoUri = recipe
+    ? getMainPhotoUri(recipe)
+    : undefined;
+
+  const selectedPhoto =
+    photos.find(
+      (photo) => photo.id === selectedPhotoId
+    ) ??
+    photos.find(
+      (photo) => photo.uri === mainPhotoUri
+    ) ??
+    photos[0];
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+    >
       <View style={styles.topButtons}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>‹ Back</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButton}>
+            ‹ Back
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={editRecipe}
           disabled={!recipe}
         >
-          <Text style={styles.editButton}>Edit</Text>
+          <Text style={styles.editButton}>
+            Edit
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -130,11 +182,70 @@ export default function RecipeScreen() {
           : 'Not rated'}
       </Text>
 
-      {recipe?.photoUri ? (
-        <Image
-          source={{ uri: recipe.photoUri }}
-          style={styles.recipePhoto}
-        />
+      {selectedPhoto ? (
+        <>
+          <Image
+            source={{ uri: selectedPhoto.uri }}
+            style={styles.recipePhoto}
+          />
+
+          {photos.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={
+                false
+              }
+              contentContainerStyle={
+                styles.thumbnailRow
+              }
+            >
+              {photos.map((photo) => {
+                const isSelected =
+                  photo.id === selectedPhoto.id;
+
+                const isMain =
+                  photo.uri === mainPhotoUri;
+
+                return (
+                  <TouchableOpacity
+                    key={photo.id}
+                    style={[
+                      styles.thumbnailWrapper,
+                      isSelected &&
+                        styles.thumbnailSelected,
+                    ]}
+                    onPress={() =>
+                      setSelectedPhotoId(
+                        photo.id
+                      )
+                    }
+                  >
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={styles.thumbnail}
+                    />
+
+                    {isMain ? (
+                      <View
+                        style={
+                          styles.thumbnailMainBadge
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.thumbnailMainBadgeText
+                          }
+                        >
+                          MAIN
+                        </Text>
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : null}
+        </>
       ) : null}
 
       <View style={styles.section}>
@@ -143,7 +254,8 @@ export default function RecipeScreen() {
         </Text>
 
         <Text style={styles.bodyText}>
-          {recipe?.ingredients || 'No ingredients added.'}
+          {recipe?.ingredients ||
+            'No ingredients added.'}
         </Text>
       </View>
 
@@ -153,7 +265,8 @@ export default function RecipeScreen() {
         </Text>
 
         <Text style={styles.bodyText}>
-          {recipe?.instructions || 'No instructions added.'}
+          {recipe?.instructions ||
+            'No instructions added.'}
         </Text>
       </View>
 
@@ -230,6 +343,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  favoriteButton: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#7A3E2F',
+    marginBottom: 14,
+  },
+
   rating: {
     fontSize: 20,
     color: '#A96C25',
@@ -240,7 +360,46 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 260,
     borderRadius: 18,
-    marginBottom: 24,
+    marginBottom: 12,
+  },
+
+  thumbnailRow: {
+    gap: 10,
+    paddingBottom: 24,
+  },
+
+  thumbnailWrapper: {
+    position: 'relative',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 2,
+  },
+
+  thumbnailSelected: {
+    borderColor: '#7A3E2F',
+  },
+
+  thumbnail: {
+    width: 76,
+    height: 62,
+    borderRadius: 9,
+  },
+
+  thumbnailMainBadge: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    backgroundColor: '#7A3E2F',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+
+  thumbnailMainBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '800',
   },
 
   section: {
@@ -278,12 +437,5 @@ const styles = StyleSheet.create({
     color: '#B24A3A',
     fontSize: 16,
     fontWeight: '700',
-  },
-
-  favoriteButton: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7A3E2F',
-    marginBottom: 14,
   },
 });

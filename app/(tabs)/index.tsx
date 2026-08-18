@@ -11,12 +11,17 @@ import {
   View,
 } from 'react-native';
 
-import { getRecipes, Recipe } from '../../services/recipeStorage';
+import {
+  getMainPhotoUri,
+  getRecipes,
+  Recipe,
+} from '../../services/recipeStorage';
 
 export default function HomeScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [searchText, setSearchText] = useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] =
+    useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,24 +40,32 @@ export default function HomeScreen() {
     const matchesSearch =
       !search ||
       recipe.name.toLowerCase().includes(search) ||
-      recipe.ingredients.toLowerCase().includes(search) ||
+      recipe.ingredients
+        .toLowerCase()
+        .includes(search) ||
       recipe.notes.toLowerCase().includes(search) ||
-      recipe.category?.toLowerCase().includes(search);
+      recipe.category
+        ?.toLowerCase()
+        .includes(search);
 
     const matchesFavorite =
-      !showFavoritesOnly || recipe.favorite === true;
+      !showFavoritesOnly ||
+      recipe.favorite === true;
 
     return matchesSearch && matchesFavorite;
   });
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+    >
       <Text style={styles.eyebrow}>MY KITCHEN</Text>
 
       <Text style={styles.title}>Recipe Box</Text>
 
       <Text style={styles.subtitle}>
-        Save the dishes you create, remember what worked, and keep your favorites close at hand.
+        Save the dishes you create, remember what
+        worked, and keep your favorites close at hand.
       </Text>
 
       <TextInput
@@ -67,14 +80,18 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            !showFavoritesOnly && styles.filterButtonActive,
+            !showFavoritesOnly &&
+              styles.filterButtonActive,
           ]}
-          onPress={() => setShowFavoritesOnly(false)}
+          onPress={() =>
+            setShowFavoritesOnly(false)
+          }
         >
           <Text
             style={[
               styles.filterButtonText,
-              !showFavoritesOnly && styles.filterButtonTextActive,
+              !showFavoritesOnly &&
+                styles.filterButtonTextActive,
             ]}
           >
             All Recipes
@@ -84,14 +101,18 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            showFavoritesOnly && styles.filterButtonActive,
+            showFavoritesOnly &&
+              styles.filterButtonActive,
           ]}
-          onPress={() => setShowFavoritesOnly(true)}
+          onPress={() =>
+            setShowFavoritesOnly(true)
+          }
         >
           <Text
             style={[
               styles.filterButtonText,
-              showFavoritesOnly && styles.filterButtonTextActive,
+              showFavoritesOnly &&
+                styles.filterButtonTextActive,
             ]}
           >
             ♥ Favorites
@@ -101,24 +122,42 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => router.push('/add-recipe')}
+        onPress={() =>
+          router.push('/add-recipe')
+        }
       >
-        <Text style={styles.primaryButtonText}>＋ Add a Recipe</Text>
+        <Text style={styles.primaryButtonText}>
+          ＋ Add a Recipe
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>⌕ Search</Text>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+        >
+          <Text
+            style={styles.secondaryButtonText}
+          >
+            ⌕ Search
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>▦ Meal Plan</Text>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+        >
+          <Text
+            style={styles.secondaryButtonText}
+          >
+            ▦ Meal Plan
+          </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          {showFavoritesOnly ? 'Favorites' : 'Recently Added'}
+          {showFavoritesOnly
+            ? 'Favorites'
+            : 'Recently Added'}
         </Text>
 
         <Text style={styles.sectionLink}>
@@ -128,76 +167,108 @@ export default function HomeScreen() {
 
       {recipes.length === 0 && (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No recipes saved yet</Text>
-          <Text style={styles.emptyText}>
-            Capture your first dish and it will appear here.
-          </Text>
-        </View>
-      )}
-
-      {recipes.length > 0 && filteredRecipes.length === 0 && (
-        <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>
-            {showFavoritesOnly && !searchText
-              ? 'No favorites yet'
-              : 'No recipes found'}
+            No recipes saved yet
           </Text>
 
           <Text style={styles.emptyText}>
-            {showFavoritesOnly && !searchText
-              ? 'Tap the heart on a recipe to add it to your favorites.'
-              : 'Try a different search or filter.'}
+            Capture your first dish and it will
+            appear here.
           </Text>
         </View>
       )}
 
-      {filteredRecipes.map((recipe) => (
-        <TouchableOpacity
-          key={recipe.id}
-          style={styles.recipeCard}
-          onPress={() =>
-            router.push({
-              pathname: '/recipe',
-              params: {
-                id: recipe.id,
-              },
-            })
-          }
-        >
-          {recipe.photoUri ? (
-            <Image
-              source={{ uri: recipe.photoUri }}
-              style={styles.recipeImage}
-            />
-          ) : (
-            <View style={styles.recipeImagePlaceholder}>
-              <Text style={styles.recipeImageText}>Dish photo</Text>
-            </View>
-          )}
-
-          <View style={styles.recipeDetails}>
-            <View style={styles.recipeTitleRow}>
-              <Text style={styles.recipeName}>{recipe.name}</Text>
-
-              {recipe.favorite ? (
-                <Text style={styles.favoriteHeart}>♥</Text>
-              ) : null}
-            </View>
-
-            {recipe.category ? (
-              <Text style={styles.category}>{recipe.category}</Text>
-            ) : null}
-
-            <Text style={styles.rating}>
-              {recipe.rating
-                ? '★'.repeat(Number(recipe.rating))
-                : 'Not rated'}
+      {recipes.length > 0 &&
+        filteredRecipes.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>
+              {showFavoritesOnly && !searchText
+                ? 'No favorites yet'
+                : 'No recipes found'}
             </Text>
 
-            <Text style={styles.recipeNote}>Tap to view recipe</Text>
+            <Text style={styles.emptyText}>
+              {showFavoritesOnly && !searchText
+                ? 'Tap the heart on a recipe to add it to your favorites.'
+                : 'Try a different search or filter.'}
+            </Text>
           </View>
-        </TouchableOpacity>
-      ))}
+        )}
+
+      {filteredRecipes.map((recipe) => {
+        const mainPhotoUri =
+          getMainPhotoUri(recipe);
+
+        return (
+          <TouchableOpacity
+            key={recipe.id}
+            style={styles.recipeCard}
+            onPress={() =>
+              router.push({
+                pathname: '/recipe',
+                params: {
+                  id: recipe.id,
+                },
+              })
+            }
+          >
+            {mainPhotoUri ? (
+              <Image
+                source={{ uri: mainPhotoUri }}
+                style={styles.recipeImage}
+              />
+            ) : (
+              <View
+                style={
+                  styles.recipeImagePlaceholder
+                }
+              >
+                <Text
+                  style={styles.recipeImageText}
+                >
+                  Dish photo
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.recipeDetails}>
+              <View
+                style={styles.recipeTitleRow}
+              >
+                <Text style={styles.recipeName}>
+                  {recipe.name}
+                </Text>
+
+                {recipe.favorite ? (
+                  <Text
+                    style={styles.favoriteHeart}
+                  >
+                    ♥
+                  </Text>
+                ) : null}
+              </View>
+
+              {recipe.category ? (
+                <Text style={styles.category}>
+                  {recipe.category}
+                </Text>
+              ) : null}
+
+              <Text style={styles.rating}>
+                {recipe.rating
+                  ? '★'.repeat(
+                      Number(recipe.rating)
+                    )
+                  : 'Not rated'}
+              </Text>
+
+              <Text style={styles.recipeNote}>
+                Tap to view recipe
+              </Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
 
       <View style={styles.memoryCard}>
         <Text style={styles.memoryLabel}>
@@ -209,7 +280,9 @@ export default function HomeScreen() {
         </Text>
 
         <Text style={styles.memoryText}>
-          As your recipe box grows, this space will remind you about highly rated dishes you have not made recently.
+          As your recipe box grows, this space will
+          remind you about highly rated dishes you
+          have not made recently.
         </Text>
       </View>
     </ScrollView>

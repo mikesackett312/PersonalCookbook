@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export type RecipePhoto = {
+  id: string;
+  uri: string;
+};
+
 export type Recipe = {
   id: string;
   name: string;
@@ -9,7 +14,14 @@ export type Recipe = {
   instructions: string;
   notes: string;
   createdAt: string;
+
+  // v0.10 multiple-photo model
+  photos?: RecipePhoto[];
+  mainPhotoId?: string;
+
+  // Legacy v0.9 single-photo field
   photoUri?: string;
+
   favorite?: boolean;
 };
 
@@ -20,10 +32,63 @@ export type EditableRecipeFields = {
   ingredients: string;
   instructions: string;
   notes: string;
-  photoUri?: string;
+  photos: RecipePhoto[];
+  mainPhotoId?: string;
 };
 
 const RECIPES_KEY = 'personal-cookbook-recipes';
+
+/**
+ * Returns all photos belonging to a recipe.
+ *
+ * Existing v0.9 recipes only have photoUri. We convert that
+ * old photo into the new photo structure when reading it so
+ * existing recipes continue to work without a separate migration.
+ */
+export function getRecipePhotos(recipe: Recipe): RecipePhoto[] {
+  if (recipe.photos && recipe.photos.length > 0) {
+    return recipe.photos;
+  }
+
+  if (recipe.photoUri) {
+    return [
+      {
+        id: `legacy-${recipe.id}`,
+        uri: recipe.photoUri,
+      },
+    ];
+  }
+
+  return [];
+}
+
+/**
+ * Returns the URI of the photo that should represent the recipe.
+ *
+ * If no main photo has been explicitly selected, the first photo
+ * automatically becomes the main photo.
+ */
+export function getMainPhotoUri(
+  recipe: Recipe
+): string | undefined {
+  const photos = getRecipePhotos(recipe);
+
+  if (photos.length === 0) {
+    return undefined;
+  }
+
+  if (recipe.mainPhotoId) {
+    const mainPhoto = photos.find(
+      (photo) => photo.id === recipe.mainPhotoId
+    );
+
+    if (mainPhoto) {
+      return mainPhoto.uri;
+    }
+  }
+
+  return photos[0].uri;
+}
 
 export async function getRecipes(): Promise<Recipe[]> {
   const storedRecipes = await AsyncStorage.getItem(RECIPES_KEY);
@@ -35,9 +100,15 @@ export async function getRecipes(): Promise<Recipe[]> {
   return JSON.parse(storedRecipes) as Recipe[];
 }
 
-export async function saveRecipe(recipe: Recipe): Promise<void> {
+export async function saveRecipe(
+  recipe: Recipe
+): Promise<void> {
   const existingRecipes = await getRecipes();
-  const updatedRecipes = [recipe, ...existingRecipes];
+
+  const updatedRecipes = [
+    recipe,
+    ...existingRecipes,
+  ];
 
   await AsyncStorage.setItem(
     RECIPES_KEY,
@@ -45,7 +116,9 @@ export async function saveRecipe(recipe: Recipe): Promise<void> {
   );
 }
 
-export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
+export async function updateRecipe(
+  updatedRecipe: Recipe
+): Promise<void> {
   const recipes = await getRecipes();
 
   const updatedRecipes = recipes.map((recipe) =>
@@ -53,8 +126,13 @@ export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
       ? {
           ...recipe,
           ...updatedRecipe,
+
+          // These values should never be accidentally
+          // replaced during a general update.
           id: recipe.id,
-          createdAt: recipe.createdAt || updatedRecipe.createdAt,
+          createdAt:
+            recipe.createdAt ||
+            updatedRecipe.createdAt,
         }
       : recipe
   );
@@ -65,6 +143,12 @@ export async function updateRecipe(updatedRecipe: Recipe): Promise<void> {
   );
 }
 
+/**
+ * Updates only fields controlled by the recipe edit screen.
+ *
+ * favorite, createdAt, id and future unrelated fields remain
+ * untouched.
+ */
 export async function updateRecipeFields(
   id: string,
   fields: EditableRecipeFields
@@ -76,21 +160,33 @@ export async function updateRecipeFields(
       return recipe;
     }
 
+    const validMainPhotoId = fields.photos.some(
+      (photo) =>
+        photo.id === fields.mainPhotoId
+    )
+      ? fields.mainPhotoId
+      : fields.photos[0]?.id;
+
+    const mainPhoto = fields.photos.find(
+      (photo) =>
+        photo.id === validMainPhotoId
+    );
+
     return {
       ...recipe,
+
       name: fields.name,
       rating: fields.rating,
       category: fields.category,
       ingredients: fields.ingredients,
       instructions: fields.instructions,
       notes: fields.notes,
-      photoUri: fields.photoUri,
 
-      // Intentionally preserve:
-      // recipe.id
-      // recipe.createdAt
-      // recipe.favorite
-      // and any future fields not controlled by this edit form
+      photos: fields.photos,
+      mainPhotoId: validMainPhotoId,
+
+      // Keep the legacy field synchronized for now.
+      photoUri: mainPhoto?.uri,
     };
   });
 
@@ -105,10 +201,16 @@ export async function getRecipeById(
 ): Promise<Recipe | null> {
   const recipes = await getRecipes();
 
-  return recipes.find((recipe) => recipe.id === id) ?? null;
+  return (
+    recipes.find(
+      (recipe) => recipe.id === id
+    ) ?? null
+  );
 }
 
-export async function deleteRecipe(id: string): Promise<void> {
+export async function deleteRecipe(
+  id: string
+): Promise<void> {
   const recipes = await getRecipes();
 
   const remainingRecipes = recipes.filter(
