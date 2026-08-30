@@ -13,8 +13,6 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function AddRecipeScreen() {
   const { id } = useLocalSearchParams<{
@@ -276,10 +275,7 @@ export default function AddRecipeScreen() {
           createdAt: new Date().toISOString(),
           photos,
           mainPhotoId: resolvedMainPhotoId,
-
-          // Keep the legacy field synchronized for now.
           photoUri: mainPhoto?.uri,
-
           favorite: false,
         };
 
@@ -307,202 +303,203 @@ export default function AddRecipeScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.screen}
-      behavior={
-        Platform.OS === 'ios' ? 'padding' : undefined
-      }
+      contentContainerStyle={styles.container}
+      enableOnAndroid
+      enableAutomaticScroll
+      extraScrollHeight={120}
+      keyboardOpeningTime={0}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+      <Text style={styles.eyebrow}>
+        {typeof id === 'string'
+          ? 'EDIT DISH'
+          : 'NEW DISH'}
+      </Text>
+
+      <Text style={styles.title}>
+        {typeof id === 'string'
+          ? 'Edit Recipe'
+          : 'Add a Recipe'}
+      </Text>
+
+      <Text style={styles.label}>Photos</Text>
+
+      <TouchableOpacity
+        style={styles.photoButton}
+        onPress={addPhoto}
       >
-        <Text style={styles.eyebrow}>
-          {typeof id === 'string'
-            ? 'EDIT DISH'
-            : 'NEW DISH'}
+        <Text style={styles.photoButtonText}>
+          ＋ Add Photo
         </Text>
+      </TouchableOpacity>
 
-        <Text style={styles.title}>
-          {typeof id === 'string'
-            ? 'Edit Recipe'
-            : 'Add a Recipe'}
+      {photos.length === 0 ? (
+        <Text style={styles.noPhotosText}>
+          No photos added yet.
         </Text>
-
-        <Text style={styles.label}>Photos</Text>
-
-        <TouchableOpacity
-          style={styles.photoButton}
-          onPress={addPhoto}
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.photoGallery}
         >
-          <Text style={styles.photoButtonText}>
-            ＋ Add Photo
-          </Text>
-        </TouchableOpacity>
+          {photos.map((photo) => {
+            const isMain = photo.id === mainPhotoId;
 
-        {photos.length === 0 ? (
-          <Text style={styles.noPhotosText}>
-            No photos added yet.
-          </Text>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.photoGallery}
-          >
-            {photos.map((photo) => {
-              const isMain =
-                photo.id === mainPhotoId;
+            return (
+              <View
+                key={photo.id}
+                style={styles.photoCard}
+              >
+                <View style={styles.photoImageWrapper}>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.photoPreview}
+                  />
 
-              return (
-                <View
-                  key={photo.id}
-                  style={styles.photoCard}
-                >
-                  <View style={styles.photoImageWrapper}>
-                    <Image
-                      source={{ uri: photo.uri }}
-                      style={styles.photoPreview}
-                    />
-
-                    {isMain ? (
-                      <View style={styles.mainBadge}>
-                        <Text style={styles.mainBadgeText}>
-                          MAIN
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {!isMain ? (
-                    <TouchableOpacity
-                      style={styles.photoActionButton}
-                      onPress={() =>
-                        makeMainPhoto(photo.id)
-                      }
-                    >
-                      <Text style={styles.photoActionText}>
-                        Make Main
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.mainPhotoIndicator}>
-                      <Text
-                        style={
-                          styles.mainPhotoIndicatorText
-                        }
-                      >
-                        Main Photo
+                  {isMain ? (
+                    <View style={styles.mainBadge}>
+                      <Text style={styles.mainBadgeText}>
+                        MAIN
                       </Text>
                     </View>
-                  )}
+                  ) : null}
+                </View>
 
+                {!isMain ? (
                   <TouchableOpacity
+                    style={styles.photoActionButton}
                     onPress={() =>
-                      removePhoto(photo.id)
+                      makeMainPhoto(photo.id)
                     }
                   >
-                    <Text style={styles.removePhotoText}>
-                      Remove
+                    <Text style={styles.photoActionText}>
+                      Make Main
                     </Text>
                   </TouchableOpacity>
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
+                ) : (
+                  <View style={styles.mainPhotoIndicator}>
+                    <Text
+                      style={
+                        styles.mainPhotoIndicatorText
+                      }
+                    >
+                      Main Photo
+                    </Text>
+                  </View>
+                )}
 
-        <Text style={styles.label}>Recipe name</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    removePhoto(photo.id)
+                  }
+                >
+                  <Text style={styles.removePhotoText}>
+                    Remove
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
 
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder="Example: Cajun Shrimp Pasta"
-          placeholderTextColor="#9A938C"
-          style={styles.input}
-        />
+      <Text style={styles.label}>Recipe name</Text>
 
-        <Text style={styles.label}>Category</Text>
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Example: Cajun Shrimp Pasta"
+        placeholderTextColor="#9A938C"
+        style={styles.input}
+      />
 
-        <TextInput
-          value={category}
-          onChangeText={setCategory}
-          placeholder="Example: Chicken, Soup, Dessert"
-          placeholderTextColor="#9A938C"
-          style={styles.input}
-        />
+      <Text style={styles.label}>Category</Text>
 
-        <Text style={styles.label}>Rating</Text>
+      <TextInput
+        value={category}
+        onChangeText={setCategory}
+        placeholder="Example: Chicken, Soup, Dessert"
+        placeholderTextColor="#9A938C"
+        style={styles.input}
+      />
 
-        <TextInput
-          value={rating}
-          onChangeText={setRating}
-          placeholder="1–5"
-          placeholderTextColor="#9A938C"
-          keyboardType="number-pad"
-          maxLength={1}
-          style={styles.input}
-        />
+      <Text style={styles.label}>Rating</Text>
 
-        <Text style={styles.label}>Ingredients</Text>
+      <TextInput
+        value={rating}
+        onChangeText={setRating}
+        placeholder="1–5"
+        placeholderTextColor="#9A938C"
+        keyboardType="number-pad"
+        maxLength={1}
+        style={styles.input}
+      />
 
-        <TextInput
-          value={ingredients}
-          onChangeText={setIngredients}
-          placeholder={
-            '1 lb shrimp\n2 cloves garlic\n1 cup cream'
-          }
-          placeholderTextColor="#9A938C"
-          multiline
-          textAlignVertical="top"
-          style={[styles.input, styles.largeInput]}
-        />
+      <Text style={styles.label}>Ingredients</Text>
 
-        <Text style={styles.label}>Instructions</Text>
+      <TextInput
+        value={ingredients}
+        onChangeText={setIngredients}
+        placeholder={
+          '1 lb shrimp\n2 cloves garlic\n1 cup cream'
+        }
+        placeholderTextColor="#9A938C"
+        multiline
+        scrollEnabled
+        textAlignVertical="top"
+        style={[styles.input, styles.ingredientsInput]}
+      />
 
-        <TextInput
-          value={instructions}
-          onChangeText={setInstructions}
-          placeholder="Describe how you prepared the dish."
-          placeholderTextColor="#9A938C"
-          multiline
-          textAlignVertical="top"
-          style={[styles.input, styles.largeInput]}
-        />
+      <Text style={styles.label}>Instructions</Text>
 
-        <Text style={styles.label}>
-          Notes and changes for next time
+      <TextInput
+        value={instructions}
+        onChangeText={setInstructions}
+        placeholder="Describe how you prepared the dish."
+        placeholderTextColor="#9A938C"
+        multiline
+        scrollEnabled
+        textAlignVertical="top"
+        style={[styles.input, styles.instructionsInput]}
+      />
+
+      <Text style={styles.label}>
+        Notes and changes for next time
+      </Text>
+
+      <TextInput
+        value={notes}
+        onChangeText={setNotes}
+        placeholder="Use less salt, double the sauce, cook five minutes longer..."
+        placeholderTextColor="#9A938C"
+        multiline
+        scrollEnabled
+        textAlignVertical="top"
+        style={[styles.input, styles.notesInput]}
+      />
+
+      <TouchableOpacity
+        style={styles.saveButton}
+        onPress={saveRecipe}
+      >
+        <Text style={styles.saveButtonText}>
+          Save Recipe
         </Text>
+      </TouchableOpacity>
 
-        <TextInput
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Use less salt, double the sauce, cook five minutes longer..."
-          placeholderTextColor="#9A938C"
-          multiline
-          textAlignVertical="top"
-          style={[styles.input, styles.notesInput]}
-        />
-
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={saveRecipe}
-        >
-          <Text style={styles.saveButtonText}>
-            Save Recipe
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.cancelButtonText}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={() => router.back()}
+      >
+        <Text style={styles.cancelButtonText}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -515,7 +512,7 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
     paddingHorizontal: 22,
-    paddingBottom: 50,
+    paddingBottom: 80,
   },
 
   eyebrow: {
@@ -645,12 +642,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  largeInput: {
-    minHeight: 140,
+  ingredientsInput: {
+    height: 160,
+  },
+
+  instructionsInput: {
+    height: 180,
   },
 
   notesInput: {
-    minHeight: 105,
+    height: 140,
   },
 
   saveButton: {

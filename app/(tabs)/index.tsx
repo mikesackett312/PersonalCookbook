@@ -34,39 +34,53 @@ export default function HomeScreen() {
     }, [])
   );
 
+  const favoriteCount = recipes.filter(
+    (recipe) => recipe.favorite === true
+  ).length;
+
   const filteredRecipes = recipes.filter((recipe) => {
     const search = searchText.toLowerCase().trim();
 
     const matchesSearch =
       !search ||
       recipe.name.toLowerCase().includes(search) ||
-      recipe.ingredients
-        .toLowerCase()
-        .includes(search) ||
+      recipe.ingredients.toLowerCase().includes(search) ||
       recipe.notes.toLowerCase().includes(search) ||
-      recipe.category
-        ?.toLowerCase()
-        .includes(search);
+      recipe.category?.toLowerCase().includes(search);
 
     const matchesFavorite =
-      !showFavoritesOnly ||
-      recipe.favorite === true;
+      !showFavoritesOnly || recipe.favorite === true;
 
     return matchesSearch && matchesFavorite;
   });
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-    >
-      <Text style={styles.eyebrow}>MY KITCHEN</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Modern Heirloom brand label */}
+      <View style={styles.brandLabel}>
+        <View style={styles.brandLabelInner}>
+          <Text style={styles.title}>Recipe Box</Text>
 
-      <Text style={styles.title}>Recipe Box</Text>
+          <Text style={styles.tagline}>
+            Cook. Remember. Share.
+          </Text>
+        </View>
+      </View>
 
-      <Text style={styles.subtitle}>
-        Save the dishes you create, remember what
-        worked, and keep your favorites close at hand.
-      </Text>
+      {/* Collection count */}
+      <View style={styles.collectionRow}>
+        <Text style={styles.collectionText}>
+          <Text style={styles.collectionNumber}>
+            {recipes.length}
+          </Text>{' '}
+          {recipes.length === 1 ? 'Recipe' : 'Recipes'}
+          <Text style={styles.collectionDot}>  ·  </Text>
+          <Text style={styles.collectionNumber}>
+            {favoriteCount}
+          </Text>{' '}
+          {favoriteCount === 1 ? 'Favorite' : 'Favorites'}
+        </Text>
+      </View>
 
       <TextInput
         value={searchText}
@@ -80,12 +94,9 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            !showFavoritesOnly &&
-              styles.filterButtonActive,
+            !showFavoritesOnly && styles.filterButtonActive,
           ]}
-          onPress={() =>
-            setShowFavoritesOnly(false)
-          }
+          onPress={() => setShowFavoritesOnly(false)}
         >
           <Text
             style={[
@@ -101,12 +112,9 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            showFavoritesOnly &&
-              styles.filterButtonActive,
+            showFavoritesOnly && styles.filterButtonActive,
           ]}
-          onPress={() =>
-            setShowFavoritesOnly(true)
-          }
+          onPress={() => setShowFavoritesOnly(true)}
         >
           <Text
             style={[
@@ -122,42 +130,22 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() =>
-          router.push('/add-recipe')
-        }
+        onPress={() => router.push('/add-recipe')}
       >
         <Text style={styles.primaryButtonText}>
           ＋ Add a Recipe
         </Text>
       </TouchableOpacity>
 
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-        >
-          <Text
-            style={styles.secondaryButtonText}
-          >
-            ⌕ Search
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-        >
-          <Text
-            style={styles.secondaryButtonText}
-          >
-            ▦ Meal Plan
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.secondaryButton}>
+        <Text style={styles.secondaryButtonText}>
+          ▦ Meal Plan
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          {showFavoritesOnly
-            ? 'Favorites'
-            : 'Recently Added'}
+          {showFavoritesOnly ? 'Favorites' : 'Recently Added'}
         </Text>
 
         <Text style={styles.sectionLink}>
@@ -172,8 +160,7 @@ export default function HomeScreen() {
           </Text>
 
           <Text style={styles.emptyText}>
-            Capture your first dish and it will
-            appear here.
+            Capture your first dish and it will appear here.
           </Text>
         </View>
       )}
@@ -196,8 +183,7 @@ export default function HomeScreen() {
         )}
 
       {filteredRecipes.map((recipe) => {
-        const mainPhotoUri =
-          getMainPhotoUri(recipe);
+        const mainPhotoUri = getMainPhotoUri(recipe);
 
         return (
           <TouchableOpacity
@@ -218,33 +204,21 @@ export default function HomeScreen() {
                 style={styles.recipeImage}
               />
             ) : (
-              <View
-                style={
-                  styles.recipeImagePlaceholder
-                }
-              >
-                <Text
-                  style={styles.recipeImageText}
-                >
+              <View style={styles.recipeImagePlaceholder}>
+                <Text style={styles.recipeImageText}>
                   Dish photo
                 </Text>
               </View>
             )}
 
             <View style={styles.recipeDetails}>
-              <View
-                style={styles.recipeTitleRow}
-              >
+              <View style={styles.recipeTitleRow}>
                 <Text style={styles.recipeName}>
                   {recipe.name}
                 </Text>
 
                 {recipe.favorite ? (
-                  <Text
-                    style={styles.favoriteHeart}
-                  >
-                    ♥
-                  </Text>
+                  <Text style={styles.favoriteHeart}>♥</Text>
                 ) : null}
               </View>
 
@@ -256,9 +230,7 @@ export default function HomeScreen() {
 
               <Text style={styles.rating}>
                 {recipe.rating
-                  ? '★'.repeat(
-                      Number(recipe.rating)
-                    )
+                  ? '★'.repeat(Number(recipe.rating))
                   : 'Not rated'}
               </Text>
 
@@ -280,9 +252,9 @@ export default function HomeScreen() {
         </Text>
 
         <Text style={styles.memoryText}>
-          As your recipe box grows, this space will
-          remind you about highly rated dishes you
-          have not made recently.
+          As your recipe box grows, this space will remind
+          you about highly rated dishes you have not made
+          recently.
         </Text>
       </View>
     </ScrollView>
@@ -293,49 +265,80 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: '#F7F3EC',
-    paddingTop: 72,
+    paddingTop: 64,
     paddingHorizontal: 22,
     paddingBottom: 40,
   },
 
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 2,
-    color: '#8A5A44',
-    marginBottom: 8,
+  // Modern Heirloom brand label
+  brandLabel: {
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: '#CDBDA9',
+    padding: 5,
+    marginBottom: 12,
+  },
+
+  brandLabelInner: {
+    borderWidth: 1,
+    borderColor: '#E3D8CA',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    alignItems: 'center',
   },
 
   title: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#2D2A26',
-    marginBottom: 10,
+    fontFamily: 'Georgia',
+    fontSize: 38,
+    fontWeight: '600',
+    letterSpacing: -1,
+    color: '#302A25',
   },
 
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#67615A',
-    marginBottom: 18,
+  tagline: {
+    fontFamily: 'Georgia',
+    fontSize: 14,
+    fontStyle: 'italic',
+    letterSpacing: 0.4,
+    color: '#7A3E2F',
+    marginTop: 7,
+  },
+
+  collectionRow: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  collectionText: {
+    fontSize: 13,
+    color: '#766D64',
+  },
+
+  collectionNumber: {
+    fontWeight: '800',
+    color: '#7A3E2F',
+  },
+
+  collectionDot: {
+    color: '#A79C91',
   },
 
   searchInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E4DCD2',
-    borderRadius: 14,
+    borderColor: '#DED4C7',
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#2D2A26',
+    color: '#302A25',
     marginBottom: 12,
   },
 
   filterRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 18,
+    marginBottom: 14,
   },
 
   filterButton: {
@@ -365,10 +368,10 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     backgroundColor: '#7A3E2F',
-    borderRadius: 16,
-    paddingVertical: 17,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   primaryButtonText: {
@@ -377,20 +380,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 30,
-  },
-
   secondaryButton: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5DED4',
+    borderColor: '#DED4C7',
+    marginBottom: 26,
   },
 
   secondaryButtonText: {
@@ -407,9 +404,10 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
+    fontFamily: 'Georgia',
     fontSize: 22,
-    fontWeight: '800',
-    color: '#2D2A26',
+    fontWeight: '600',
+    color: '#302A25',
   },
 
   sectionLink: {
@@ -529,9 +527,10 @@ const styles = StyleSheet.create({
   },
 
   memoryTitle: {
+    fontFamily: 'Georgia',
     fontSize: 20,
-    fontWeight: '800',
-    color: '#2D2A26',
+    fontWeight: '600',
+    color: '#302A25',
     marginBottom: 8,
   },
 
