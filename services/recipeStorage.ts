@@ -161,27 +161,23 @@ export async function updateRecipeFields(
     }
 
     const validMainPhotoId = fields.photos.some(
-      (photo) =>
-        photo.id === fields.mainPhotoId
+      (photo) => photo.id === fields.mainPhotoId
     )
       ? fields.mainPhotoId
       : fields.photos[0]?.id;
 
     const mainPhoto = fields.photos.find(
-      (photo) =>
-        photo.id === validMainPhotoId
+      (photo) => photo.id === validMainPhotoId
     );
 
     return {
       ...recipe,
-
       name: fields.name,
       rating: fields.rating,
       category: fields.category,
       ingredients: fields.ingredients,
       instructions: fields.instructions,
       notes: fields.notes,
-
       photos: fields.photos,
       mainPhotoId: validMainPhotoId,
 
@@ -220,5 +216,21 @@ export async function deleteRecipe(
   await AsyncStorage.setItem(
     RECIPES_KEY,
     JSON.stringify(remainingRecipes)
+  );
+}
+
+/**
+ * Replaces the complete Recipe Box.
+ *
+ * This is intentionally separate from saveRecipe/updateRecipe.
+ * It is used by backup restoration so a validated backup can
+ * atomically replace the stored recipe collection.
+ */
+export async function replaceRecipes(
+  recipes: Recipe[]
+): Promise<void> {
+  await AsyncStorage.setItem(
+    RECIPES_KEY,
+    JSON.stringify(recipes)
   );
 }
