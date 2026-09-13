@@ -56,15 +56,13 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Modern Heirloom brand label */}
-      <View style={styles.brandLabel}>
-        <View style={styles.brandLabelInner}>
-          <Text style={styles.title}>Recipe Box</Text>
-
-          <Text style={styles.tagline}>
-            Cook. Remember. Share.
-          </Text>
-        </View>
+      {/* Heritage Recipe Box branding */}
+      <View style={styles.brandImageContainer}>
+        <Image
+          source={require('../../assets/images/recipe-box-brand-card.png')}
+          style={styles.brandImage}
+          resizeMode="contain"
+        />
       </View>
 
       {/* Collection count */}
@@ -265,43 +263,28 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: '#F7F3EC',
-    paddingTop: 64,
+    paddingTop: 34,
     paddingHorizontal: 22,
     paddingBottom: 40,
   },
 
-  // Modern Heirloom brand label
-  brandLabel: {
-    backgroundColor: '#FFFDF8',
-    borderWidth: 1,
-    borderColor: '#CDBDA9',
-    padding: 5,
-    marginBottom: 12,
-  },
-
-  brandLabelInner: {
-    borderWidth: 1,
-    borderColor: '#E3D8CA',
-    paddingVertical: 13,
-    paddingHorizontal: 16,
+  brandImageContainer: {
+    width: '100%',
+    height: 175,
+    overflow: 'hidden',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
 
-  title: {
-    fontFamily: 'Georgia',
-    fontSize: 38,
-    fontWeight: '600',
-    letterSpacing: -1,
-    color: '#302A25',
-  },
-
-  tagline: {
-    fontFamily: 'Georgia',
-    fontSize: 14,
-    fontStyle: 'italic',
-    letterSpacing: 0.4,
-    color: '#7A3E2F',
-    marginTop: 7,
+  brandImage: {
+    width: '138%',
+    height: 330,
+    transform: [
+      {
+        translateY: -38,
+      },
+    ],
   },
 
   collectionRow: {
