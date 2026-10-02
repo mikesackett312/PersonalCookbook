@@ -130,6 +130,26 @@ export default function RecipeScreen() {
     ) ??
     photos[0];
 
+  let stepNumber = 0;
+  const structuredSections = recipe?.components?.map((component) => ({
+    id: component.id,
+    name: component.name.trim(),
+    ingredients: component.ingredients
+      .map((ingredient) =>
+        [ingredient.quantity, ingredient.unit, ingredient.ingredient]
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(' ')
+      )
+      .filter(Boolean)
+      .join('\n'),
+    instructions: component.steps
+      .map((step) => step.text.trim())
+      .filter(Boolean)
+      .map((text) => `${++stepNumber}. ${text}`)
+      .join('\n\n'),
+  }));
+
   return (
     <ScrollView
       contentContainerStyle={styles.container}
@@ -248,27 +268,55 @@ export default function RecipeScreen() {
         </>
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Ingredients
-        </Text>
+      {structuredSections && structuredSections.length > 0 ? (
+        structuredSections.map((component) => (
+          <View key={component.id}>
+            {component.name ? (
+              <Text style={styles.componentTitle}>
+                {component.name}
+              </Text>
+            ) : null}
 
-        <Text style={styles.bodyText}>
-          {recipe?.ingredients ||
-            'No ingredients added.'}
-        </Text>
-      </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ingredients</Text>
+              <Text style={styles.bodyText}>
+                {component.ingredients || 'No ingredients added.'}
+              </Text>
+            </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Instructions
-        </Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Instructions</Text>
+              <Text style={styles.bodyText}>
+                {component.instructions || 'No instructions added.'}
+              </Text>
+            </View>
+          </View>
+        ))
+      ) : (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Ingredients
+            </Text>
 
-        <Text style={styles.bodyText}>
-          {recipe?.instructions ||
-            'No instructions added.'}
-        </Text>
-      </View>
+            <Text style={styles.bodyText}>
+              {recipe?.ingredients ||
+                'No ingredients added.'}
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Instructions
+            </Text>
+
+            <Text style={styles.bodyText}>
+              {recipe?.instructions ||
+                'No instructions added.'}
+            </Text>
+          </View>
+        </>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
@@ -409,6 +457,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E9E2D9',
+  },
+
+  componentTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#7A3E2F',
+    marginTop: 8,
+    marginBottom: 12,
   },
 
   sectionTitle: {
