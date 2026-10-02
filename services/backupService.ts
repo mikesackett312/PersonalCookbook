@@ -5,12 +5,23 @@ import * as Sharing from 'expo-sharing';
 import {
     getRecipePhotos,
     getRecipes,
+    normalizeRecipe,
     Recipe,
     replaceRecipes,
 } from './recipeStorage';
 
 const BACKUP_FORMAT = 'recipe-box-backup';
-const BACKUP_VERSION = 1;
+
+/**
+ * v0.12 backups were version 1.
+ *
+ * v0.14 creates version 2 backups containing the new
+ * structured recipe model while continuing to restore
+ * version 1 backups.
+ */
+const BACKUP_VERSION = 2;
+
+const SUPPORTED_BACKUP_VERSIONS = [1, 2];
 
 type StoredPhoto = {
   id: string;
@@ -53,6 +64,7 @@ export type BackupResult = {
 
 function getExtension(uri: string): string {
   const cleanUri = uri.split('?')[0];
+
   const match = cleanUri.match(
     /\.([a-zA-Z0-9]+)$/
   );
@@ -110,7 +122,10 @@ function validateBackup(
   }
 
   if (
-    backup.version !== BACKUP_VERSION
+    typeof backup.version !== 'number' ||
+    !SUPPORTED_BACKUP_VERSIONS.includes(
+      backup.version
+    )
   ) {
     throw new Error(
       'This backup was created by an unsupported version of Recipe Box.'
@@ -187,7 +202,9 @@ async function buildBackup():
     recipeIndex += 1
   ) {
     const recipe =
-      recipes[recipeIndex];
+      normalizeRecipe(
+        recipes[recipeIndex]
+      );
 
     const recipePhotos =
       getRecipePhotos(recipe);
@@ -197,8 +214,7 @@ async function buildBackup():
 
     for (
       let photoIndex = 0;
-      photoIndex <
-      recipePhotos.length;
+      photoIndex < recipePhotos.length;
       photoIndex += 1
     ) {
       const photo =
@@ -492,14 +508,22 @@ export async function restoreBackup(
               validMainPhotoId
           );
 
-        return {
+        /**
+         * v1 backups do not contain components.
+         * normalizeRecipe creates the default structured
+         * component while preserving the original text.
+         *
+         * v2 backups already contain structured content,
+         * so normalizeRecipe simply leaves it intact.
+         */
+        return normalizeRecipe({
           ...storedRecipe,
           photos: restoredPhotos,
           mainPhotoId:
             validMainPhotoId,
           photoUri:
             mainPhoto?.uri,
-        };
+        });
       }
     );
 
