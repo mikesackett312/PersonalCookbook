@@ -1,6 +1,7 @@
 import {
   getRecipeById,
   getRecipePhotos,
+  cleanupUnusedRecipePhotos,
   Recipe,
   RecipeComponent,
   RecipeIngredient,
@@ -9,10 +10,11 @@ import {
   saveRecipe as saveRecipeToStorage,
   updateRecipeFields,
 } from '../services/recipeStorage';
+import { copyRecipePhoto } from '../services/recipePhotos';
 
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -247,6 +249,23 @@ export default function AddRecipeScreen() {
   >([createBlankComponent()]);
 
   const [photos, setPhotos] = useState<RecipePhoto[]>([]);
+  const draftPhotoUris = useRef(new Set<string>());
+  const mounted = useRef(true);
+  const saving = useRef<Promise<void> | null>(null);
+  const copying = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    const drafts = draftPhotoUris.current;
+    return () => {
+      mounted.current = false;
+      // Wait for an in-flight save before deciding which draft files are unused.
+      void (async () => {
+        try { await saving.current; } catch { /* Failed saves leave drafts unused. */ }
+        await cleanupUnusedRecipePhotos([...drafts]);
+      })();
+    };
+  }, []);
 
   const [mainPhotoId, setMainPhotoId] = useState<
     string | undefined
@@ -343,25 +362,42 @@ export default function AddRecipeScreen() {
     return createId('photo');
   }
 
-  function addPhotoUris(uris: string[]) {
+  async function addPhotoUris(uris: string[]) {
     if (uris.length === 0) {
       return;
     }
 
-    const newPhotos = uris.map((uri) => ({
-      id: createPhotoId(),
-      uri,
-    }));
+    if (copying.current || saving.current) return;
+    copying.current = true;
+    const newPhotos: RecipePhoto[] = [];
+    try {
+      for (const uri of uris) {
+        const durableUri = await copyRecipePhoto(uri);
+        draftPhotoUris.current.add(durableUri);
+        newPhotos.push({ id: createPhotoId(), uri: durableUri });
+      }
+      if (!mounted.current) {
+        await cleanupUnusedRecipePhotos(newPhotos.map((photo) => photo.uri));
+        return;
+      }
 
-    setPhotos((currentPhotos) => [
-      ...currentPhotos,
-      ...newPhotos,
-    ]);
+      setPhotos((currentPhotos) => [
+        ...currentPhotos,
+        ...newPhotos,
+      ]);
 
-    setMainPhotoId(
-      (currentMainPhotoId) =>
-        currentMainPhotoId ?? newPhotos[0].id
-    );
+      setMainPhotoId(
+        (currentMainPhotoId) =>
+          currentMainPhotoId ?? newPhotos[0].id
+      );
+    } catch (error) {
+      await cleanupUnusedRecipePhotos(newPhotos.map((photo) => photo.uri));
+      if (mounted.current) {
+        Alert.alert('Photo could not be added', error instanceof Error ? error.message : String(error));
+      }
+    } finally {
+      copying.current = false;
+    }
   }
 
   async function choosePhotosFromLibrary() {
@@ -373,7 +409,7 @@ export default function AddRecipeScreen() {
       });
 
     if (!result.canceled) {
-      addPhotoUris(
+      await addPhotoUris(
         result.assets.map((asset) => asset.uri)
       );
     }
@@ -399,7 +435,7 @@ export default function AddRecipeScreen() {
     });
 
     if (!result.canceled) {
-      addPhotoUris([result.assets[0].uri]);
+      await addPhotoUris([result.assets[0].uri]);
     }
   }
 
@@ -437,6 +473,8 @@ export default function AddRecipeScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: () => {
+            if (saving.current) return;
+            const removedPhoto = photos.find((photo) => photo.id === photoId);
             setPhotos((currentPhotos) => {
               const remainingPhotos =
                 currentPhotos.filter(
@@ -452,6 +490,9 @@ export default function AddRecipeScreen() {
 
               return remainingPhotos;
             });
+            if (removedPhoto && draftPhotoUris.current.has(removedPhoto.uri)) {
+              void cleanupUnusedRecipePhotos([removedPhoto.uri]);
+            }
           },
         },
       ]
@@ -846,6 +887,7 @@ export default function AddRecipeScreen() {
   }
 
   async function saveRecipe() {
+    if (saving.current || copying.current) return;
     if (!name.trim()) {
       Alert.alert(
         'Recipe name required',
@@ -880,7 +922,7 @@ export default function AddRecipeScreen() {
 
     try {
       if (typeof id === 'string') {
-        await updateRecipeFields(id, {
+        saving.current = updateRecipeFields(id, {
           name: name.trim(),
           rating: rating.trim(),
           category: category.trim(),
@@ -891,6 +933,7 @@ export default function AddRecipeScreen() {
           mainPhotoId: resolvedMainPhotoId,
           components: cleanedComponents,
         });
+        await saving.current;
 
         Alert.alert(
           'Recipe updated',
@@ -922,7 +965,8 @@ export default function AddRecipeScreen() {
           },
         };
 
-        await saveRecipeToStorage(newRecipe);
+        saving.current = saveRecipeToStorage(newRecipe);
+        await saving.current;
 
         Alert.alert(
           'Recipe saved',
@@ -942,6 +986,8 @@ export default function AddRecipeScreen() {
           : String(error);
 
       Alert.alert('Save failed', message);
+    } finally {
+      saving.current = null;
     }
   }
 

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { deleteOwnedRecipePhotos } from './recipePhotos';
 
 export type RecipePhoto = {
   id: string;
@@ -139,6 +140,23 @@ export type EditableRecipeFields = {
 };
 
 const RECIPES_KEY = 'personal-cookbook-recipes';
+
+function photoUris(recipes: Recipe[]): string[] {
+  return recipes.flatMap((recipe) => [
+    ...getRecipePhotos(recipe).map((photo) => photo.uri),
+    ...(recipe.photoUri ? [recipe.photoUri] : []),
+  ]);
+}
+
+/** Keep shared files and legacy references; skip cleanup if storage cannot be read. */
+export async function cleanupUnusedRecipePhotos(uris: string[]): Promise<void> {
+  try {
+    const retained = new Set(photoUris(await getRecipes()));
+    await deleteOwnedRecipePhotos(uris.filter((uri) => !retained.has(uri)));
+  } catch (error) {
+    console.warn('Recipe Box could not check photo references for cleanup.', error);
+  }
+}
 
 /**
  * Create deterministic IDs while migrating legacy recipes.
@@ -497,6 +515,7 @@ export async function updateRecipeFields(
     RECIPES_KEY,
     JSON.stringify(updatedRecipes)
   );
+  await cleanupUnusedRecipePhotos(photoUris(recipes.filter((recipe) => recipe.id === id)));
 }
 
 export async function getRecipeById(
@@ -524,6 +543,7 @@ export async function deleteRecipe(
     RECIPES_KEY,
     JSON.stringify(remainingRecipes)
   );
+  await cleanupUnusedRecipePhotos(photoUris(recipes.filter((recipe) => recipe.id === id)));
 }
 
 /**
