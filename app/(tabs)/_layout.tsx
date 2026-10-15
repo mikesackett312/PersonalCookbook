@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -33,13 +33,39 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="add"
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.push('/add-recipe');
+          },
+        }}
+        options={{
+          title: 'Add',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="plus.circle.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: 'Favorites',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="heart.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="explore"
         options={{
           title: 'More',
           tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
-              name="paperplane.fill"
+              name="ellipsis"
               color={color}
             />
           ),

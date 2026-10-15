@@ -18,10 +18,12 @@ import {
 } from '../../services/recipeStorage';
 
 export default function HomeScreen() {
+  return <RecipeCollection />;
+}
+
+export function RecipeCollection({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [searchText, setSearchText] = useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] =
-    useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,20 +51,21 @@ export default function HomeScreen() {
       recipe.category?.toLowerCase().includes(search);
 
     const matchesFavorite =
-      !showFavoritesOnly || recipe.favorite === true;
+      !favoritesOnly || recipe.favorite === true;
 
     return matchesSearch && matchesFavorite;
   });
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Heritage Recipe Box branding */}
-      <View style={styles.brandImageContainer}>
-        <Image
-          source={require('../../assets/images/recipe-box-brand-card.png')}
-          style={styles.brandImage}
-          resizeMode="contain"
-        />
+      {/* A simple branded index card keeps the Home header light. */}
+      <View style={styles.brandCard}>
+        <View style={styles.brandRule} />
+        <Text accessibilityRole="header" style={styles.brandTitle}>
+          Recipe Box
+        </Text>
+        <Text style={styles.brandSubtitle}>Cook. Remember. Share.</Text>
+        <View style={styles.brandBottomRule} />
       </View>
 
       {/* Collection count */}
@@ -88,67 +91,11 @@ export default function HomeScreen() {
         style={styles.searchInput}
       />
 
-      <View style={styles.filterRow}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            !showFavoritesOnly && styles.filterButtonActive,
-          ]}
-          onPress={() => setShowFavoritesOnly(false)}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              !showFavoritesOnly &&
-                styles.filterButtonTextActive,
-            ]}
-          >
-            All Recipes
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            showFavoritesOnly && styles.filterButtonActive,
-          ]}
-          onPress={() => setShowFavoritesOnly(true)}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              showFavoritesOnly &&
-                styles.filterButtonTextActive,
-            ]}
-          >
-            ♥ Favorites
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => router.push('/add-recipe')}
-      >
-        <Text style={styles.primaryButtonText}>
-          ＋ Add a Recipe
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>
-          ▦ Meal Plan
-        </Text>
-      </TouchableOpacity>
-
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          {showFavoritesOnly ? 'Favorites' : 'Recently Added'}
+          {favoritesOnly ? 'Favorites' : 'Your Recipes'}
         </Text>
 
-        <Text style={styles.sectionLink}>
-          {filteredRecipes.length}
-        </Text>
       </View>
 
       {recipes.length === 0 && (
@@ -167,15 +114,15 @@ export default function HomeScreen() {
         filteredRecipes.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>
-              {showFavoritesOnly && !searchText
+              {favoritesOnly && !searchText
                 ? 'No favorites yet'
                 : 'No recipes found'}
             </Text>
 
             <Text style={styles.emptyText}>
-              {showFavoritesOnly && !searchText
+              {favoritesOnly && !searchText
                 ? 'Tap the heart on a recipe to add it to your favorites.'
-                : 'Try a different search or filter.'}
+                : 'Try a different search.'}
             </Text>
           </View>
         )}
@@ -240,21 +187,6 @@ export default function HomeScreen() {
         );
       })}
 
-      <View style={styles.memoryCard}>
-        <Text style={styles.memoryLabel}>
-          FROM YOUR COOKING MEMORY
-        </Text>
-
-        <Text style={styles.memoryTitle}>
-          Rediscover a forgotten favorite
-        </Text>
-
-        <Text style={styles.memoryText}>
-          As your recipe box grows, this space will remind
-          you about highly rated dishes you have not made
-          recently.
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -262,29 +194,54 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F7F3EC',
+    backgroundColor: '#EDF2E9',
     paddingTop: 34,
     paddingHorizontal: 22,
     paddingBottom: 40,
   },
 
-  brandImageContainer: {
+  brandCard: {
     width: '100%',
-    height: 175,
-    overflow: 'hidden',
+    minHeight: 150,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 22,
+    backgroundColor: '#FFFAF0',
+    borderWidth: 1,
+    borderColor: '#D5DCCE',
+    borderRadius: 12,
   },
 
-  brandImage: {
-    width: '138%',
-    height: 330,
-    transform: [
-      {
-        translateY: -38,
-      },
-    ],
+  brandRule: {
+    alignSelf: 'stretch',
+    height: 1,
+    backgroundColor: '#D8B4A4',
+    marginBottom: 14,
+  },
+
+  brandTitle: {
+    fontFamily: 'Georgia',
+    fontSize: 36,
+    fontWeight: '600',
+    color: '#302A25',
+    textAlign: 'center',
+  },
+
+  brandSubtitle: {
+    fontFamily: 'Georgia',
+    fontSize: 16,
+    color: '#625B54',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+
+  brandBottomRule: {
+    alignSelf: 'stretch',
+    height: 1,
+    backgroundColor: '#D5DFD9',
+    marginTop: 14,
   },
 
   collectionRow: {
@@ -307,76 +264,15 @@ const styles = StyleSheet.create({
   },
 
   searchInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFAF0',
     borderWidth: 1,
-    borderColor: '#DED4C7',
+    borderColor: '#D5DCCE',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     color: '#302A25',
     marginBottom: 12,
-  },
-
-  filterRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-
-  filterButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D9D0C6',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  filterButtonActive: {
-    backgroundColor: '#7A3E2F',
-    borderColor: '#7A3E2F',
-  },
-
-  filterButtonText: {
-    color: '#625B54',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  filterButtonTextActive: {
-    color: '#FFFFFF',
-  },
-
-  primaryButton: {
-    backgroundColor: '#7A3E2F',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-
-  secondaryButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DED4C7',
-    marginBottom: 26,
-  },
-
-  secondaryButtonText: {
-    color: '#493F37',
-    fontSize: 15,
-    fontWeight: '700',
   },
 
   sectionHeader: {
@@ -393,19 +289,13 @@ const styles = StyleSheet.create({
     color: '#302A25',
   },
 
-  sectionLink: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#8A5A44',
-  },
-
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFAF0',
     borderRadius: 18,
     padding: 20,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E9E2D9',
+    borderColor: '#D5DCCE',
   },
 
   emptyTitle: {
@@ -423,12 +313,12 @@ const styles = StyleSheet.create({
 
   recipeCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFAF0',
     borderRadius: 18,
     marginBottom: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E9E2D9',
+    borderColor: '#D5DCCE',
   },
 
   recipeImage: {
@@ -441,7 +331,7 @@ const styles = StyleSheet.create({
     minHeight: 110,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#DDD0C2',
+    backgroundColor: '#DCE5D7',
   },
 
   recipeImageText: {
@@ -494,32 +384,4 @@ const styles = StyleSheet.create({
     color: '#7B746D',
   },
 
-  memoryCard: {
-    backgroundColor: '#E7DED0',
-    borderRadius: 18,
-    padding: 20,
-    marginTop: 12,
-  },
-
-  memoryLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.3,
-    color: '#7A3E2F',
-    marginBottom: 8,
-  },
-
-  memoryTitle: {
-    fontFamily: 'Georgia',
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#302A25',
-    marginBottom: 8,
-  },
-
-  memoryText: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: '#625B54',
-  },
 });
