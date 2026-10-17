@@ -41,7 +41,7 @@ type StoredRecipe = Omit<
   photos: StoredRecipePhoto[];
 };
 
-type RecipeBoxBackup = {
+export type RecipeBoxBackup = {
   format: typeof BACKUP_FORMAT;
   version: number;
   createdAt: string;
@@ -152,7 +152,7 @@ function validateBackup(
   return backup as RecipeBoxBackup;
 }
 
-async function readBackupFromUri(
+export async function readBackupFromUri(
   uri: string
 ): Promise<RecipeBoxBackup> {
   let contents: string;

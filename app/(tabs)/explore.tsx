@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router/react-navigation';
 import {
   useCallback,
   useState,
@@ -24,8 +24,10 @@ import {
   pickBackupFile,
   restoreBackup,
 } from '../../services/backupService';
+import { recoverPhotosFromBackup, type PhotoRecoveryReport } from '../../services/photoRecovery';
 
 export default function MoreScreen() {
+  const [recoveryReport, setRecoveryReport] = useState<PhotoRecoveryReport | null>(null);
   const [recipeCount, setRecipeCount] =
     useState(0);
 
@@ -86,6 +88,35 @@ export default function MoreScreen() {
         'Backup Could Not Be Created',
         message
       );
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function handleRecoverPhotos() {
+    if (isWorking) return;
+    setIsWorking(true);
+    setRecoveryReport(null);
+    try {
+      const picked = await pickBackupFile();
+      if (!picked) return;
+      const confirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert('Recover Photos Only?',
+          'Recover missing photos with matching recipe and photo IDs. Current recipe content and existing durable photos will be kept. Stay on this screen until recovery finishes.',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Recover Photos', onPress: () => resolve(true) },
+          ], { cancelable: true, onDismiss: () => resolve(false) });
+      });
+      if (!confirmed) return;
+      const report = await recoverPhotosFromBackup(picked.uri);
+      setRecoveryReport(report);
+      Alert.alert('Photo Recovery Finished',
+        `${report.recovered} photo references recovered. ${report.kept} existing photos kept. ${report.skipped.length} skipped. See details below.`);
+    } catch (error) {
+      Alert.alert('Photo Recovery Failed',
+        (error instanceof Error ? error.message : 'Photo recovery could not finish.')
+        + '\n\nRecovery did not complete. Current photos were not deleted. You can retry safely.');
     } finally {
       setIsWorking(false);
     }
@@ -286,6 +317,29 @@ export default function MoreScreen() {
             Restore Backup
           </Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.utilityCard}>
+        <Text style={styles.utilityTitle}>Recover Photos from Backup</Text>
+        <Text style={styles.utilityText}>
+          Repair missing photo references using an older .recipebox backup. Your current recipes,
+          edits, ratings, and favorites stay intact. Only matching recipe and photo IDs are used.
+        </Text>
+        <TouchableOpacity
+          style={[styles.secondaryButton, isWorking && styles.buttonDisabled]}
+          onPress={handleRecoverPhotos}
+          disabled={isWorking}
+        >
+          <Text style={styles.secondaryButtonText}>{isWorking ? 'Working...' : 'Recover Photos'}</Text>
+        </TouchableOpacity>
+        {recoveryReport && (
+          <Text selectable style={styles.utilityText}>
+            {`Recovered: ${recoveryReport.recovered}; kept: ${recoveryReport.kept}; reused files: ${recoveryReport.reusedFiles}.`}
+            {recoveryReport.skipped.map((item, index) =>
+              `\n${index + 1}. Recipe ${item.recipeId ?? '(unreferenced)'} / photo ${item.photoId ?? '(none)'}: ${item.reason}`
+            ).join('')}
+          </Text>
+        )}
       </View>
 
       <View style={styles.infoCard}>

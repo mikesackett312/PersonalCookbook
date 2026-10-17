@@ -2,18 +2,18 @@ import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
-} from '@react-navigation/native';
+} from 'expo-router/react-navigation';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   useEffect,
-  useRef,
   useState,
 } from 'react';
 import {
   Animated,
   Easing,
   StyleSheet,
+  useAnimatedValue,
   View,
 } from 'react-native';
 
@@ -30,29 +30,17 @@ export default function RootLayout() {
 
   const [showOpening, setShowOpening] = useState(true);
 
-  const closedOpacity = useRef(
-    new Animated.Value(1)
-  ).current;
+  const closedOpacity = useAnimatedValue(1);
 
-  const openOpacity = useRef(
-    new Animated.Value(0)
-  ).current;
+  const openOpacity = useAnimatedValue(0);
 
-  const cardOpacity = useRef(
-    new Animated.Value(0)
-  ).current;
+  const cardOpacity = useAnimatedValue(0);
 
-  const cardTranslateY = useRef(
-    new Animated.Value(18)
-  ).current;
+  const cardTranslateY = useAnimatedValue(18);
 
-  const cardScale = useRef(
-    new Animated.Value(0.985)
-  ).current;
+  const cardScale = useAnimatedValue(0.985);
 
-  const openingOpacity = useRef(
-    new Animated.Value(1)
-  ).current;
+  const openingOpacity = useAnimatedValue(1);
 
   useEffect(() => {
     Animated.sequence([
@@ -230,7 +218,7 @@ const styles = StyleSheet.create({
   },
 
   openingScreen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
     backgroundColor: '#F7F3EC',
     alignItems: 'center',

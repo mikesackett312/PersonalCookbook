@@ -564,3 +564,36 @@ export async function replaceRecipes(
     JSON.stringify(normalizedRecipes)
   );
 }
+
+/** Recovery uses raw storage: never normalize or import recipe content from a backup. */
+export async function readPhotoRecoverySnapshot(): Promise<string | null> {
+  return AsyncStorage.getItem(RECIPES_KEY);
+}
+
+export async function commitPhotoRecovery(
+  snapshot: string | null,
+  replacements: { recipeId: string; photoId: string; previousUri: string; uri: string }[]
+): Promise<void> {
+  if (await AsyncStorage.getItem(RECIPES_KEY) !== snapshot) {
+    throw new Error('Recipes changed during recovery. Please retry while the editor is closed.');
+  }
+  if (!snapshot || replacements.length === 0) return;
+  const recipes: Recipe[] = JSON.parse(snapshot);
+  for (const replacement of replacements) {
+    const matches = recipes.filter((recipe) => recipe.id === replacement.recipeId);
+    if (matches.length !== 1) throw new Error('Ambiguous recipe ID during recovery.');
+    const recipe = matches[0];
+    const photos = getRecipePhotos(recipe);
+    const matchesPhoto = photos.filter((photo) => photo.id === replacement.photoId);
+    if (matchesPhoto.length !== 1 || matchesPhoto[0].uri !== replacement.previousUri) {
+      throw new Error('Photo references changed during recovery.');
+    }
+    if (recipe.photos?.length) {
+      recipe.photos = recipe.photos.map((photo) => photo.id === replacement.photoId
+        ? { ...photo, uri: replacement.uri } : photo);
+    }
+    if (recipe.photoUri === replacement.previousUri) recipe.photoUri = replacement.uri;
+  }
+  // AsyncStorage has no compare-and-swap primitive. Call while editing is disabled.
+  await AsyncStorage.setItem(RECIPES_KEY, JSON.stringify(recipes));
+}
